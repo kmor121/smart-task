@@ -226,7 +226,7 @@ export default function DailyLog() {
           <div className="flex flex-wrap gap-2 mb-8">
             <Button variant="outline" size="sm" onClick={addRow} className="gap-1.5">
               <Plus className="w-3.5 h-3.5" />
-              明細を追加
+              作業を追加する
             </Button>
             <Button variant="outline" size="sm" onClick={copyPreviousDay} className="gap-1.5">
               <Copy className="w-3.5 h-3.5" />
