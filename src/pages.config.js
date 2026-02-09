@@ -47,13 +47,24 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import DailyLog from './pages/DailyLog';
+import Dashboard from './pages/Dashboard';
+import Projects from './pages/Projects';
+import Reassign from './pages/Reassign';
+import MasterData from './pages/MasterData';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "DailyLog": DailyLog,
+    "Dashboard": Dashboard,
+    "Projects": Projects,
+    "Reassign": Reassign,
+    "MasterData": MasterData,
 }
 
 export const pagesConfig = {
+    mainPage: "DailyLog",
     Pages: PAGES,
     Layout: __Layout,
 };
