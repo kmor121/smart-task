@@ -65,7 +65,7 @@ export default function WorkLogRow({
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 shadow-sm">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">明細 {index + 1}</span>
+        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">本日の作業 {index + 1}</span>
         {canRemove && (
           <Button variant="ghost" size="sm" onClick={() => onRemove(index)} className="text-red-400 hover:text-red-600 hover:bg-red-50 h-7 w-7 p-0">
             <Trash2 className="w-3.5 h-3.5" />
