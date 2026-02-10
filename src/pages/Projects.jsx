@@ -1,236 +1,198 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import useCurrentUser from "../components/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Search, Building2 } from "lucide-react";
 import { toast } from "sonner";
-import useCurrentUser from "../components/hooks/useCurrentUser";
-import useMasterData from "../components/hooks/useMasterData";
 
-const statusColors = {
-  "進行中": "bg-emerald-100 text-emerald-700",
-  "完了": "bg-slate-100 text-slate-500",
-  "保留": "bg-yellow-100 text-yellow-700",
-  "仮案件": "bg-amber-100 text-amber-700",
-};
-
-export default function Projects() {
-  const { user, canManageProjects } = useCurrentUser();
-  const { clients, departments } = useMasterData();
+export default function ProjectsPage() {
+  const { user, loading, isSales } = useCurrentUser();
   const queryClient = useQueryClient();
-
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("進行中");
-  const [showDialog, setShowDialog] = useState(false);
-  const [editingProject, setEditingProject] = useState(null);
-  const [saving, setSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({ name: "", client_name: "", status: "見込み" });
 
   const { data: projects = [], isLoading } = useQuery({
-    queryKey: ["allProjects"],
-    queryFn: () => base44.entities.Project.list("-created_date", 2000),
+    queryKey: ['projects'],
+    queryFn: async () => {
+      const result = await base44.entities.Project.filter({ is_active: true }, '-created_date');
+      return result;
+    },
+    enabled: !!user
   });
 
-  const filtered = projects.filter(p => {
-    if (statusFilter && statusFilter !== "_all" && p.status !== statusFilter) return false;
-    if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !(p.client_name || "").toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
+  const createMutation = useMutation({
+    mutationFn: async (data) => {
+      const response = await base44.functions.invoke('createProject', data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      setDialogOpen(false);
+      setFormData({ name: "", client_name: "", status: "見込み" });
+      toast.success("案件を作成しました");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || "案件の作成に失敗しました");
+    }
   });
 
-  const emptyForm = {
-    name: "",
-    client_id: "",
-    client_name: "",
-    status: "進行中",
-    description: "",
-    is_temporary: false,
-  };
-
-  const openNew = () => {
-    setEditingProject(emptyForm);
-    setShowDialog(true);
-  };
-
-  const openEdit = (p) => {
-    setEditingProject({ ...p });
-    setShowDialog(true);
-  };
-
-  const save = async () => {
-    if (!editingProject.name) {
-      toast.error("案件名を入力してください");
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.client_name) {
+      toast.error("案件名と顧客名は必須です");
       return;
     }
-    setSaving(true);
-    try {
-      const client = clients.find(c => c.id === editingProject.client_id);
-      const data = {
-        ...editingProject,
-        client_name: client?.name || editingProject.client_name || "",
-      };
-
-      if (editingProject.id) {
-        await base44.entities.Project.update(editingProject.id, data);
-        toast.success("案件を更新しました");
-      } else {
-        await base44.entities.Project.create(data);
-        toast.success("案件を作成しました");
-      }
-      queryClient.invalidateQueries({ queryKey: ["allProjects"] });
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      setShowDialog(false);
-    } catch (e) {
-      toast.error("保存に失敗しました");
-    } finally {
-      setSaving(false);
-    }
+    createMutation.mutate(formData);
   };
 
-  if (!user) return null;
+  const filteredProjects = projects.filter(p => 
+    p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.client_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const statusColors = {
+    "見込み": "bg-slate-100 text-slate-700",
+    "進行中": "bg-blue-100 text-blue-700",
+    "受注": "bg-green-100 text-green-700",
+    "失注": "bg-red-100 text-red-700",
+    "完了": "bg-gray-100 text-gray-700"
+  };
+
+  if (loading || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-800 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">案件管理</h1>
-          <p className="text-sm text-slate-500 mt-1">{filtered.length}件の案件</p>
+    <div className="min-h-screen bg-slate-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">案件管理</h1>
+            <p className="text-sm text-slate-500 mt-1">営業案件の一覧と管理</p>
+          </div>
+          {isSales && (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  新規案件
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>新規案件作成</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 mb-1 block">
+                      案件名 <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="案件名を入力"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 mb-1 block">
+                      顧客名 <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      value={formData.client_name}
+                      onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                      placeholder="顧客名を入力"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 mb-1 block">
+                      ステータス
+                    </label>
+                    <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="見込み">見込み</SelectItem>
+                        <SelectItem value="進行中">進行中</SelectItem>
+                        <SelectItem value="受注">受注</SelectItem>
+                        <SelectItem value="失注">失注</SelectItem>
+                        <SelectItem value="完了">完了</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                      キャンセル
+                    </Button>
+                    <Button type="submit" disabled={createMutation.isPending}>
+                      {createMutation.isPending ? "作成中..." : "作成"}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
-        {canManageProjects && (
-          <Button onClick={openNew} className="gap-2 bg-slate-900 hover:bg-slate-800">
-            <Plus className="w-4 h-4" />
-            新規案件
-          </Button>
+
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="案件名・顧客名で検索..."
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        {filteredProjects.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Building2 className="w-12 h-12 text-slate-300 mb-3" />
+              <p className="text-slate-500">案件がありません</p>
+              {isSales && (
+                <p className="text-sm text-slate-400 mt-1">「＋新規案件」から作成してください</p>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {filteredProjects.map((project) => (
+              <Card key={project.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{project.name}</CardTitle>
+                      <p className="text-sm text-slate-500 mt-1">顧客: {project.client_name}</p>
+                    </div>
+                    <Badge className={statusColors[project.status] || statusColors["見込み"]}>
+                      {project.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4 text-xs text-slate-500">
+                    <span>担当: {project.owner_user_name}</span>
+                    <span>作成日: {new Date(project.created_date).toLocaleDateString('ja-JP')}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="案件名・顧客名で検索..."
-            className="pl-9 h-9 text-sm"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-32 h-9 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_all">すべて</SelectItem>
-            <SelectItem value="進行中">進行中</SelectItem>
-            <SelectItem value="完了">完了</SelectItem>
-            <SelectItem value="保留">保留</SelectItem>
-            <SelectItem value="仮案件">仮案件</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {isLoading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map(p => (
-            <div
-              key={p.id}
-              onClick={() => canManageProjects && openEdit(p)}
-              className={`flex items-center justify-between px-5 py-3.5 bg-white rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all ${canManageProjects ? "cursor-pointer" : ""}`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="min-w-0">
-                  <p className="font-medium text-slate-800 truncate">{p.name}</p>
-                  <p className="text-xs text-slate-500">{p.client_name || "顧客未設定"}</p>
-                </div>
-              </div>
-              <Badge className={`${statusColors[p.status] || "bg-slate-100 text-slate-500"} text-xs shrink-0`}>
-                {p.status}
-              </Badge>
-            </div>
-          ))}
-          {filtered.length === 0 && (
-            <div className="text-center py-16 text-slate-400 text-sm">該当する案件がありません</div>
-          )}
-        </div>
-      )}
-
-      {/* Edit/Create Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingProject?.id ? "案件編集" : "新規案件"}</DialogTitle>
-          </DialogHeader>
-          {editingProject && (
-            <div className="space-y-4">
-              <div>
-                <Label className="text-xs">案件名 *</Label>
-                <Input
-                  value={editingProject.name}
-                  onChange={e => setEditingProject({ ...editingProject, name: e.target.value })}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">顧客</Label>
-                <Select
-                  value={editingProject.client_id || "_none"}
-                  onValueChange={v => {
-                    const cl = clients.find(c => c.id === v);
-                    setEditingProject({
-                      ...editingProject,
-                      client_id: v === "_none" ? "" : v,
-                      client_name: cl?.name || "",
-                    });
-                  }}
-                >
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">— 選択なし —</SelectItem>
-                    {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs">ステータス</Label>
-                <Select
-                  value={editingProject.status}
-                  onValueChange={v => setEditingProject({ ...editingProject, status: v })}
-                >
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="進行中">進行中</SelectItem>
-                    <SelectItem value="完了">完了</SelectItem>
-                    <SelectItem value="保留">保留</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs">メモ</Label>
-                <Textarea
-                  value={editingProject.description || ""}
-                  onChange={e => setEditingProject({ ...editingProject, description: e.target.value })}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>キャンセル</Button>
-            <Button onClick={save} disabled={saving} className="bg-slate-900 hover:bg-slate-800">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "保存"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
