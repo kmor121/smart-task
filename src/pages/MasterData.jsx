@@ -340,6 +340,60 @@ function UsersTab({ queryClient }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>テストユーザーを招待</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">メールアドレス *</Label>
+              <Input
+                type="email"
+                value={inviteForm.email}
+                onChange={e => setInviteForm({...inviteForm, email: e.target.value})}
+                placeholder="test@example.com"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">氏名 *</Label>
+              <Input
+                value={inviteForm.full_name}
+                onChange={e => setInviteForm({...inviteForm, full_name: e.target.value})}
+                placeholder="テスト 太郎"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">部署</Label>
+              <Select value={inviteForm.department_code || "_none"} onValueChange={v => setInviteForm({...inviteForm, department_code: v === "_none" ? "" : v})}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">未設定</SelectItem>
+                  {departments.map(d => <SelectItem key={d.code} value={d.code}>{d.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">権限</Label>
+              <Select value={inviteForm.app_role} onValueChange={v => setInviteForm({...inviteForm, app_role: v})}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="管理者">管理者</SelectItem>
+                  <SelectItem value="副管理者">副管理者</SelectItem>
+                  <SelectItem value="営業">営業</SelectItem>
+                  <SelectItem value="一般">一般</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowInviteDialog(false)}>キャンセル</Button>
+            <Button onClick={inviteUser} disabled={saving} className="bg-slate-900 hover:bg-slate-800">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "招待"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
