@@ -112,15 +112,14 @@ export default function WorkLogRow({
         <div>
           <label className="text-xs font-medium text-slate-500 mb-1 block">作業区分 <span className="text-red-400">*</span></label>
           <Select value={row.work_category_id || "_none"} onValueChange={v => handleChange("work_category_id", v === "_none" ? "" : v)}>
-            <SelectTrigger className={`h-9 text-sm ${row.is_revision ? "border-orange-300 bg-orange-50" : ""}`}>
+            <SelectTrigger className="h-9 text-sm">
               <SelectValue placeholder="作業区分を選択" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="_none">— 選択してください —</SelectItem>
               {filteredCategories.map(c => (
                 <SelectItem key={c.id} value={c.id}>
-                  {c.is_revision ? "🔧 " : ""}{c.name}
-                  {c.department_code ? "" : " (共通)"}
+                  {c.name}
                 </SelectItem>
               ))}
             </SelectContent>
