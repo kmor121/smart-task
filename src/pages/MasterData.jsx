@@ -227,10 +227,13 @@ function UsersTab({ queryClient }) {
     queryFn: () => base44.entities.Department.list("sort_order"),
   });
   const [showDialog, setShowDialog] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", department_code: "", app_role: "一般" });
   const [saving, setSaving] = useState(false);
 
   const openEdit = (u) => { setEditing({ ...u }); setShowDialog(true); };
+  const openInvite = () => { setInviteForm({ email: "", full_name: "", department_code: "", app_role: "一般" }); setShowInviteDialog(true); };
 
   const save = async () => {
     setSaving(true);
@@ -245,6 +248,31 @@ function UsersTab({ queryClient }) {
     } finally { setSaving(false); }
   };
 
+  const inviteUser = async () => {
+    if (!inviteForm.email || !inviteForm.full_name) {
+      toast.error("メールアドレスと氏名を入力してください");
+      return;
+    }
+    setSaving(true);
+    try {
+      await base44.users.inviteUser(inviteForm.email, "user");
+      // 招待後、ユーザー情報を更新
+      const invitedUsers = await base44.entities.User.filter({ email: inviteForm.email });
+      if (invitedUsers.length > 0) {
+        await base44.entities.User.update(invitedUsers[0].id, {
+          full_name: inviteForm.full_name,
+          department_code: inviteForm.department_code,
+          app_role: inviteForm.app_role,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["allUsers"] });
+      setShowInviteDialog(false);
+      toast.success(`${inviteForm.email} に招待メールを送信しました`);
+    } catch (error) {
+      toast.error("招待に失敗しました: " + error.message);
+    } finally { setSaving(false); }
+  };
+
   const roleColors = {
     "管理者": "bg-red-100 text-red-700",
     "副管理者": "bg-purple-100 text-purple-700",
@@ -254,6 +282,11 @@ function UsersTab({ queryClient }) {
 
   return (
     <>
+      <div className="flex justify-end mb-4">
+        <Button onClick={openInvite} size="sm" className="gap-1.5 bg-slate-900 hover:bg-slate-800">
+          <Plus className="w-3.5 h-3.5" />テストユーザーを招待
+        </Button>
+      </div>
       {isLoading ? <Loader2 className="w-5 h-5 animate-spin text-slate-400 mx-auto mt-8" /> : (
         <div className="space-y-1.5">
           {users.map(u => (

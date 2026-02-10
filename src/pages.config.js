@@ -49,18 +49,18 @@
  */
 import DailyLog from './pages/DailyLog';
 import Dashboard from './pages/Dashboard';
+import MasterData from './pages/MasterData';
 import Projects from './pages/Projects';
 import Reassign from './pages/Reassign';
-import MasterData from './pages/MasterData';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "DailyLog": DailyLog,
     "Dashboard": Dashboard,
+    "MasterData": MasterData,
     "Projects": Projects,
     "Reassign": Reassign,
-    "MasterData": MasterData,
 }
 
 export const pagesConfig = {
