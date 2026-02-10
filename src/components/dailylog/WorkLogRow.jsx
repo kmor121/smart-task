@@ -36,9 +36,7 @@ export default function WorkLogRow({
       const project = projects.find(p => p.id === value);
       updated.project_name = project?.name || "";
       updated.client_name = project?.client_name || "";
-      // client_idは顧客名から逆引き
-      const matchedClient = clients.find(c => c.name === project?.client_name);
-      updated.client_id = matchedClient?.id || row.client_id;
+      updated.client_id = project?.client_id || "";
       updated.is_temporary_project = project?.status === "仮案件";
     }
 
@@ -59,8 +57,7 @@ export default function WorkLogRow({
   const filteredProjects = projects.filter(p => {
     if (!p.is_active) return false;
     if (!row.client_id) return false;
-    const selectedClient = clients.find(c => c.id === row.client_id);
-    return p.client_name === selectedClient?.name;
+    return p.client_id === row.client_id;
   });
 
   // ユーザーの部署に合った作業区分 + 共通区分
