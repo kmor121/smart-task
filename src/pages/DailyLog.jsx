@@ -41,6 +41,7 @@ export default function DailyLog() {
 
   const [rows, setRows] = useState([emptyRow()]);
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [selectedRowForNewProject, setSelectedRowForNewProject] = useState(null);
 
   // 既存のWorkLogsを読み込み
@@ -182,7 +183,13 @@ export default function DailyLog() {
       return;
     }
 
-    setSaving(true);
+    const isSubmit = submitStatus === "提出済";
+    if (isSubmit) {
+      setSubmitting(true);
+    } else {
+      setSaving(true);
+    }
+
     try {
       // 既存レコードを削除
       for (const log of existingLogs) {
@@ -210,11 +217,15 @@ export default function DailyLog() {
 
       await base44.entities.WorkLog.bulkCreate(records);
       queryClient.invalidateQueries({ queryKey: ["workLogs", dateStr] });
-      toast.success(submitStatus === "提出済" ? "日報を提出しました" : "下書きを保存しました");
+      toast.success(isSubmit ? "提出しました" : "下書きを保存しました");
     } catch (e) {
-      toast.error("保存に失敗しました: " + e.message);
+      toast.error(isSubmit ? "提出できませんでした。もう一度お試しください" : "保存に失敗しました");
     } finally {
-      setSaving(false);
+      if (isSubmit) {
+        setSubmitting(false);
+      } else {
+        setSaving(false);
+      }
     }
   };
 
@@ -307,7 +318,7 @@ export default function DailyLog() {
             <Button
               variant="outline"
               onClick={() => saveWorkLogs("下書き")}
-              disabled={saving}
+              disabled={saving || submitting}
               className="flex-1 gap-2"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -315,11 +326,11 @@ export default function DailyLog() {
             </Button>
             <Button
               onClick={() => saveWorkLogs("提出済")}
-              disabled={saving}
+              disabled={saving || submitting}
               className="flex-1 gap-2 bg-slate-900 hover:bg-slate-800"
             >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              提出
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {submitting ? "提出中…" : "提出"}
             </Button>
           </div>
         </>
