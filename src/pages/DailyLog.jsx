@@ -9,8 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CalendarIcon, Plus, Copy, Save, Send, Clock, Loader2 } from "lucide-react";
+import { CalendarIcon, Plus, Copy, Save, Send, Clock, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "../utils";
 import useCurrentUser from "../components/hooks/useCurrentUser";
 import useMasterData from "../components/hooks/useMasterData";
 import WorkLogRow from "../components/dailylog/WorkLogRow";
@@ -32,9 +34,11 @@ export default function DailyLog() {
   const { user, isSales } = useCurrentUser();
   const { clients, projects, workCategories } = useMasterData();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [newProjectForm, setNewProjectForm] = useState({ name: "", client_name: "" });
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -226,7 +230,7 @@ export default function DailyLog() {
       queryClient.invalidateQueries({ queryKey: ["workLogs", dateStr] });
 
       if (isSubmit) {
-        toast.success(isUpdate ? "内容を更新しました" : "本日の日報を提出しました");
+        setShowSuccessModal(true);
       } else {
         toast.success("下書きを保存しました");
       }
@@ -389,6 +393,33 @@ export default function DailyLog() {
               </Button>
               <Button onClick={saveNewProject}>
                 作成
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 提出完了モーダル */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex flex-col items-center text-center py-6 space-y-4">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+              <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-900">日報を提出しました！</h2>
+            <div className="flex flex-col w-full gap-2 pt-2">
+              <Button
+                onClick={() => setShowSuccessModal(false)}
+                variant="outline"
+                className="w-full"
+              >
+                編集を続ける
+              </Button>
+              <Button
+                onClick={() => navigate(createPageUrl("Dashboard"))}
+                className="w-full bg-slate-900 hover:bg-slate-800"
+              >
+                みんなの日報を見る
               </Button>
             </div>
           </div>
