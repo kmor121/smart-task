@@ -114,9 +114,10 @@ export default function DailyLog() {
         if (selectedRowForNewProject !== null) {
           handleRowChange(selectedRowForNewProject, {
             ...rows[selectedRowForNewProject],
+            client_id: newProject.client_id || "",
+            client_name: newProject.client_name,
             project_id: newProject.id,
             project_name: newProject.name,
-            client_name: newProject.client_name,
             is_temporary_project: true
           });
         }
@@ -158,9 +159,10 @@ export default function DailyLog() {
         const updated = { ...rows[0] };
 
         if (project?.is_active !== false) {
+          updated.client_id = latestLog.client_id || "";
+          updated.client_name = latestLog.client_name || "";
           updated.project_id = latestLog.project_id || "";
           updated.project_name = latestLog.project_name || "";
-          updated.client_name = latestLog.client_name || "";
           updated.is_temporary_project = latestLog.is_temporary_project || false;
         }
 
@@ -180,9 +182,9 @@ export default function DailyLog() {
 
   const saveWorkLogs = async (submitStatus) => {
     // バリデーション
-    const invalid = rows.some(r => !r.project_id || !r.work_category_id || !r.duration_minutes);
+    const invalid = rows.some(r => !r.client_id || !r.project_id || !r.work_category_id || !r.duration_minutes);
     if (invalid) {
-      toast.error("案件・作業区分・作業時間は必須です");
+      toast.error("顧客・案件・作業区分・作業時間は必須です");
       return;
     }
 
@@ -336,7 +338,7 @@ export default function DailyLog() {
             </Button>
             <Button
               onClick={() => saveWorkLogs("提出済")}
-              disabled={saving || submitting}
+              disabled={saving || submitting || rows.some(r => !r.client_id || !r.project_id || !r.work_category_id || !r.duration_minutes)}
               className="flex-1 gap-2 bg-slate-900 hover:bg-slate-800"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

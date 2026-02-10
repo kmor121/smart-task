@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Plus } from "lucide-react";
 
 export default function WorkLogRow({
   row,
@@ -21,11 +21,22 @@ export default function WorkLogRow({
   const handleChange = (field, value) => {
     const updated = { ...row, [field]: value };
 
+    // 顧客変更時
+    if (field === "client_id") {
+      const client = clients.find(c => c.id === value);
+      updated.client_name = client?.name || "";
+      // 顧客変更時は案件をクリア
+      updated.project_id = "";
+      updated.project_name = "";
+      updated.is_temporary_project = false;
+    }
+
     // 案件変更時
     if (field === "project_id") {
       const project = projects.find(p => p.id === value);
       updated.project_name = project?.name || "";
       updated.client_name = project?.client_name || "";
+      updated.client_id = project?.client_id || "";
       updated.is_temporary_project = project?.status === "仮案件";
     }
 
@@ -39,8 +50,15 @@ export default function WorkLogRow({
     onChange(index, updated);
   };
 
-  // アクティブな案件のみ、作成日の新しい順
-  const filteredProjects = projects.filter(p => p.is_active === true);
+  // アクティブな顧客のみ
+  const filteredClients = clients.filter(c => c.is_active === true);
+
+  // アクティブな案件のみ、選択中の顧客に紐づく案件のみ
+  const filteredProjects = projects.filter(p => {
+    if (!p.is_active) return false;
+    if (!row.client_id) return false;
+    return p.client_name === clients.find(c => c.id === row.client_id)?.name;
+  });
 
   // ユーザーの部署に合った作業区分 + 共通区分
   const filteredCategories = workCategories.filter(c => {
@@ -60,12 +78,34 @@ export default function WorkLogRow({
       </div>
 
       <div className="grid grid-cols-1 gap-3">
+        {/* 顧客 */}
+        <div>
+          <label className="text-xs font-medium text-slate-500 mb-1 block">顧客 <span className="text-red-400">*</span></label>
+          <Select value={row.client_id || "_none"} onValueChange={v => handleChange("client_id", v === "_none" ? "" : v)}>
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder="顧客を選択" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_none">— 選択してください —</SelectItem>
+              {filteredClients.map(c => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* 案件 */}
         <div>
           <label className="text-xs font-medium text-slate-500 mb-1 block">案件 <span className="text-red-400">*</span></label>
-          <Select value={row.project_id || "_none"} onValueChange={v => handleChange("project_id", v === "_none" ? "" : v)}>
+          <Select 
+            value={row.project_id || "_none"} 
+            onValueChange={v => handleChange("project_id", v === "_none" ? "" : v)}
+            disabled={!row.client_id}
+          >
             <SelectTrigger className={`h-9 text-sm ${row.is_temporary_project ? "border-amber-300 bg-amber-50" : ""}`}>
-              <SelectValue placeholder="案件を選択" />
+              <SelectValue placeholder={row.client_id ? "案件を選択" : "顧客を選択してください"} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="_none">— 選択してください —</SelectItem>
