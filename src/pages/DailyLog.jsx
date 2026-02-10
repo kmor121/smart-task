@@ -116,9 +116,11 @@ export default function DailyLog() {
         
         // 該当行に自動選択
         if (selectedRowForNewProject !== null) {
+          // client_nameから該当するclientを検索
+          const matchedClient = clients.find(c => c.name === newProject.client_name);
           handleRowChange(selectedRowForNewProject, {
             ...rows[selectedRowForNewProject],
-            client_id: newProject.client_id || "",
+            client_id: matchedClient?.id || "",
             client_name: newProject.client_name,
             project_id: newProject.id,
             project_name: newProject.name,

@@ -36,7 +36,9 @@ export default function WorkLogRow({
       const project = projects.find(p => p.id === value);
       updated.project_name = project?.name || "";
       updated.client_name = project?.client_name || "";
-      updated.client_id = project?.client_id || "";
+      // client_idは顧客名から逆引き
+      const matchedClient = clients.find(c => c.name === project?.client_name);
+      updated.client_id = matchedClient?.id || row.client_id;
       updated.is_temporary_project = project?.status === "仮案件";
     }
 
@@ -57,7 +59,8 @@ export default function WorkLogRow({
   const filteredProjects = projects.filter(p => {
     if (!p.is_active) return false;
     if (!row.client_id) return false;
-    return p.client_name === clients.find(c => c.id === row.client_id)?.name;
+    const selectedClient = clients.find(c => c.id === row.client_id);
+    return p.client_name === selectedClient?.name;
   });
 
   // ユーザーの部署に合った作業区分 + 共通区分
@@ -108,12 +111,20 @@ export default function WorkLogRow({
               <SelectValue placeholder={row.client_id ? "案件を選択" : "顧客を選択してください"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="_none">— 選択してください —</SelectItem>
-              {filteredProjects.map(p => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.status === "仮案件" ? "⚠️ " : ""}{p.name}
-                </SelectItem>
-              ))}
+              {filteredProjects.length === 0 ? (
+                <div className="px-2 py-6 text-center text-sm text-slate-400">
+                  該当する案件がありません
+                </div>
+              ) : (
+                <>
+                  <SelectItem value="_none">— 選択してください —</SelectItem>
+                  {filteredProjects.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.status === "仮案件" ? "⚠️ " : ""}{p.name}
+                    </SelectItem>
+                  ))}
+                </>
+              )}
             </SelectContent>
           </Select>
           {isSales && (
