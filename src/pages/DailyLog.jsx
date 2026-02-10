@@ -131,33 +131,47 @@ export default function DailyLog() {
   };
 
   const copyPreviousDay = async () => {
-    let checkDate = subDays(selectedDate, 1);
-    // 営業日を探す（最大7日戻る）
-    for (let i = 0; i < 7; i++) {
-      const prevDateStr = format(checkDate, "yyyy-MM-dd");
-      const prevLogs = await base44.entities.WorkLog.filter({
-        work_date: prevDateStr,
-        user_email: user.email,
-      });
-      if (prevLogs.length > 0) {
-        setRows(prevLogs.map(log => ({
-          client_id: log.client_id || "",
-          client_name: log.client_name || "",
-          project_id: log.project_id || "",
-          project_name: log.project_name || "",
-          is_temporary_project: log.is_temporary_project || false,
-          work_category_id: log.work_category_id || "",
-          work_category_name: log.work_category_name || "",
-          is_revision: log.is_revision || false,
-          duration_minutes: log.duration_minutes || 0,
-          description: "",
-        })));
-        toast.success(`${format(checkDate, "M/d(E)", { locale: ja })}の作業をコピーしました`);
+    try {
+      // 今日より前の最新の日報を1件取得
+      const prevLogs = await base44.entities.WorkLog.filter(
+        { user_email: user.email },
+        '-work_date',
+        1
+      );
+
+      if (prevLogs.length === 0 || prevLogs[0].work_date >= dateStr) {
         return;
       }
-      checkDate = subDays(checkDate, 1);
+
+      const latestLog = prevLogs[0];
+
+      // Project と WorkCategory の is_active をチェック
+      const project = projects.find(p => p.id === latestLog.project_id);
+      const category = workCategories.find(c => c.id === latestLog.work_category_id);
+
+      // 最初の行に work_category_id と project_id をセット
+      if (rows.length > 0) {
+        const updated = { ...rows[0] };
+
+        if (project?.is_active !== false) {
+          updated.project_id = latestLog.project_id || "";
+          updated.project_name = latestLog.project_name || "";
+          updated.client_name = latestLog.client_name || "";
+          updated.is_temporary_project = latestLog.is_temporary_project || false;
+        }
+
+        if (category?.is_active !== false) {
+          updated.work_category_id = latestLog.work_category_id || "";
+          updated.work_category_name = latestLog.work_category_name || "";
+          updated.is_revision = latestLog.is_revision || false;
+        }
+
+        handleRowChange(0, updated);
+        toast.success("前回の日報をコピーしました");
+      }
+    } catch (error) {
+      console.error("Failed to copy previous log:", error);
     }
-    toast.error("直近7日間の作業記録が見つかりませんでした");
   };
 
   const saveWorkLogs = async (submitStatus) => {
