@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     const projectData = {
       name,
       client_name,
-      status: status || '見込み',
+      status: status || '仮案件',
       owner_user_id: user.id,
       owner_user_name: user.full_name,
       department_code: 'sales',

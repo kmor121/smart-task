@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CalendarIcon, Plus, Copy, Save, Send, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import useCurrentUser from "../components/hooks/useCurrentUser";
@@ -28,15 +29,19 @@ const emptyRow = () => ({
 });
 
 export default function DailyLog() {
-  const { user } = useCurrentUser();
+  const { user, isSales } = useCurrentUser();
   const { clients, projects, workCategories } = useMasterData();
   const queryClient = useQueryClient();
+  
+  const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
+  const [newProjectForm, setNewProjectForm] = useState({ name: "", client_name: "" });
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
   const [rows, setRows] = useState([emptyRow()]);
   const [saving, setSaving] = useState(false);
+  const [selectedRowForNewProject, setSelectedRowForNewProject] = useState(null);
 
   // 既存のWorkLogsを読み込み
   const { data: existingLogs = [], isLoading } = useQuery({
@@ -78,6 +83,53 @@ export default function DailyLog() {
   };
 
   // 前回の作業をコピー
+  const handleCreateNewProject = async (rowIndex) => {
+    setSelectedRowForNewProject(rowIndex);
+    setNewProjectForm({ name: "", client_name: "" });
+    setNewProjectDialogOpen(true);
+  };
+
+  const saveNewProject = async () => {
+    if (!newProjectForm.name || !newProjectForm.client_name) {
+      toast.error("案件名と顧客名は必須です");
+      return;
+    }
+
+    try {
+      const response = await base44.functions.invoke('createProject', {
+        name: newProjectForm.name,
+        client_name: newProjectForm.client_name,
+        status: "仮案件"
+      });
+
+      if (response.data?.success && response.data?.project) {
+        const newProject = response.data.project;
+        
+        // プロジェクト一覧を再取得
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        queryClient.invalidateQueries({ queryKey: ['masterData'] });
+        
+        // 該当行に自動選択
+        if (selectedRowForNewProject !== null) {
+          handleRowChange(selectedRowForNewProject, {
+            ...rows[selectedRowForNewProject],
+            project_id: newProject.id,
+            project_name: newProject.name,
+            client_name: newProject.client_name,
+            is_temporary_project: true
+          });
+        }
+
+        toast.success("新規案件を作成しました");
+        setNewProjectDialogOpen(false);
+        setNewProjectForm({ name: "", client_name: "" });
+        setSelectedRowForNewProject(null);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || "案件の作成に失敗しました");
+    }
+  };
+
   const copyPreviousDay = async () => {
     let checkDate = subDays(selectedDate, 1);
     // 営業日を探す（最大7日戻る）
@@ -215,8 +267,10 @@ export default function DailyLog() {
                 projects={projects}
                 workCategories={workCategories}
                 userDepartmentCode={user.department_code || ""}
+                isSales={isSales}
                 onChange={handleRowChange}
                 onRemove={removeRow}
+                onCreateNewProject={() => handleCreateNewProject(index)}
                 canRemove={rows.length > 1}
               />
             ))}
@@ -256,6 +310,53 @@ export default function DailyLog() {
           </div>
         </>
       )}
+
+      {/* 新規案件作成モーダル */}
+      <Dialog open={newProjectDialogOpen} onOpenChange={setNewProjectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>新規案件作成</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">
+                案件名 <span className="text-red-500">*</span>
+              </label>
+              <Input
+                value={newProjectForm.name}
+                onChange={(e) => setNewProjectForm({ ...newProjectForm, name: e.target.value })}
+                placeholder="案件名を入力"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">
+                顧客名 <span className="text-red-500">*</span>
+              </label>
+              <Input
+                value={newProjectForm.client_name}
+                onChange={(e) => setNewProjectForm({ ...newProjectForm, client_name: e.target.value })}
+                placeholder="顧客名を入力"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setNewProjectDialogOpen(false);
+                  setNewProjectForm({ name: "", client_name: "" });
+                  setSelectedRowForNewProject(null);
+                }}
+              >
+                キャンセル
+              </Button>
+              <Button onClick={saveNewProject}>
+                作成
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
