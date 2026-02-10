@@ -59,7 +59,7 @@ export default function WorkLogRow({
   // ユーザーの部署に合った作業区分 + 共通区分
   const filteredCategories = workCategories.filter(c => {
     if (!c.is_active) return false;
-    return !c.department_code || c.department_code === userDepartmentCode;
+    return c.department_code === "common" || c.department_code === userDepartmentCode;
   });
 
   return (
