@@ -133,14 +133,17 @@ export default function DailyLog() {
 
   const copyPreviousDay = async () => {
     try {
-      // 今日より前の最新の日報を1件取得
-      const prevLogs = await base44.entities.WorkLog.filter(
-        { user_email: user.email },
-        '-work_date',
-        1
-      );
+      // 前日の日付を取得
+      const previousDate = subDays(selectedDate, 1);
+      const previousDateStr = format(previousDate, "yyyy-MM-dd");
 
-      if (prevLogs.length === 0 || prevLogs[0].work_date >= dateStr) {
+      // 前日の日報を取得
+      const prevLogs = await base44.entities.WorkLog.filter({
+        user_email: user.email,
+        work_date: previousDateStr
+      });
+
+      if (prevLogs.length === 0) {
         return;
       }
 
@@ -168,7 +171,7 @@ export default function DailyLog() {
         }
 
         handleRowChange(0, updated);
-        toast.success("前回の日報をコピーしました");
+        toast.success("前日の作業をコピーしました");
       }
     } catch (error) {
       console.error("Failed to copy previous log:", error);
