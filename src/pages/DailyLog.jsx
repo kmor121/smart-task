@@ -184,6 +184,8 @@ export default function DailyLog() {
     }
 
     const isSubmit = submitStatus === "提出済";
+    const isUpdate = existingLogs.length > 0;
+
     if (isSubmit) {
       setSubmitting(true);
     } else {
@@ -217,7 +219,12 @@ export default function DailyLog() {
 
       await base44.entities.WorkLog.bulkCreate(records);
       queryClient.invalidateQueries({ queryKey: ["workLogs", dateStr] });
-      toast.success(isSubmit ? "提出しました" : "下書きを保存しました");
+
+      if (isSubmit) {
+        toast.success(isUpdate ? "内容を更新しました" : "本日の日報を提出しました");
+      } else {
+        toast.success("下書きを保存しました");
+      }
     } catch (e) {
       toast.error(isSubmit ? "提出できませんでした。もう一度お試しください" : "保存に失敗しました");
     } finally {
