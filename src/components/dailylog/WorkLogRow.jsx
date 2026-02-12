@@ -75,7 +75,6 @@ export default function WorkLogRow({
       onChange(index, corrected);
     }
   }, [row.project_id, row.client_id]);
-  };
 
   // アクティブな顧客のみ
   const filteredClients = clients.filter(c => c.is_active === true);
