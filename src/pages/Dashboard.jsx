@@ -5,6 +5,7 @@ import { format, subDays, startOfMonth } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Wrench, FolderKanban, Loader2, TrendingUp } from "lucide-react";
+import { createPageUrl } from "../utils";
 import useCurrentUser from "../components/hooks/useCurrentUser";
 import useMasterData from "../components/hooks/useMasterData";
 import DashboardFilters from "../components/dashboard/DashboardFilters";
@@ -91,10 +92,10 @@ export default function Dashboard() {
           <h2 className="text-xl font-bold text-slate-900 mb-2">アクセス権限がありません</h2>
           <p className="text-sm text-slate-500 mb-4">このページは管理者のみ閲覧できます</p>
           <button
-            onClick={() => window.location.href = "/"}
+            onClick={() => window.location.href = createPageUrl("MyLogs")}
             className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800"
           >
-            日報入力に戻る
+            日報一覧へ
           </button>
         </div>
       </div>
@@ -104,7 +105,7 @@ export default function Dashboard() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">みんなの日報</h1>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">工数集計</h1>
         <p className="text-sm text-slate-500 mt-1">全員の工数集計</p>
       </div>
 
