@@ -105,6 +105,8 @@ export default function WorkLogRow({
       <div className="text-[10px] text-slate-400 font-mono bg-slate-50 p-2 rounded">
         <div>clientId: {row.client_id || "null"}</div>
         <div>projectId: {row.project_id || "null"}</div>
+        <div>currentProjectValue: {currentProjectValue}</div>
+        <div>filteredProjects.length: {filteredProjects.length}</div>
         <div>projectOptionsIds: [{projectOptionsIds.join(", ")}]</div>
         <div>isSelectedInOptions: {String(isSelectedInOptions)}</div>
       </div>
