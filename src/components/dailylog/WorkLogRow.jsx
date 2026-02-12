@@ -26,16 +26,16 @@ export default function WorkLogRow({
       const client = clients.find(c => c.id === value);
       updated.client_name = client?.name || "";
       // 顧客変更時は必ず案件をクリア
-      updated.project_id = "";
+      updated.project_id = null;
       updated.project_name = "";
       updated.is_temporary_project = false;
     }
 
     // 案件変更時
     if (field === "project_id") {
-      if (value === "" || value === "_none") {
+      if (!value || value === "") {
         // クリア時
-        updated.project_id = "";
+        updated.project_id = null;
         updated.project_name = "";
         updated.is_temporary_project = false;
       } else {
@@ -49,7 +49,7 @@ export default function WorkLogRow({
           updated.is_temporary_project = project.status === "仮案件";
         } else {
           // 存在しない場合はクリア
-          updated.project_id = "";
+          updated.project_id = null;
           updated.project_name = "";
           updated.is_temporary_project = false;
         }
@@ -66,6 +66,17 @@ export default function WorkLogRow({
     onChange(index, updated);
   };
 
+  // 文字列 "null" を自動補正
+  useEffect(() => {
+    if (row.project_id === "null" || row.client_id === "null") {
+      const corrected = { ...row };
+      if (row.project_id === "null") corrected.project_id = null;
+      if (row.client_id === "null") corrected.client_id = null;
+      onChange(index, corrected);
+    }
+  }, [row.project_id, row.client_id]);
+  };
+
   // アクティブな顧客のみ
   const filteredClients = clients.filter(c => c.is_active === true);
 
@@ -80,19 +91,19 @@ export default function WorkLogRow({
   const projectOptionsIds = filteredProjects.map(p => p.id);
   
   // 選択中の project_id が options に存在するかチェック
-  const isSelectedInOptions = row.project_id && projectOptionsIds.includes(row.project_id);
+  const isSelectedInOptions = row.project_id && row.project_id !== "null" && projectOptionsIds.includes(row.project_id);
   
   // value は必ず Project.id（文字列）または空文字列
   const currentProjectValue = (row.project_id && isSelectedInOptions) ? String(row.project_id) : "";
   
   // 必須判定（営業部のみ案件が必須）
-  const isProjectInvalid = isSales && !row.project_id;
+  const isProjectInvalid = isSales && (!row.project_id || row.project_id === "null");
 
   // 無効な project_id を自動的にクリア（顧客変更時または案件が無効になった時）
   useEffect(() => {
-    if (row.project_id && !isSelectedInOptions && row.client_id && filteredProjects.length > 0) {
+    if (row.project_id && row.project_id !== "null" && !isSelectedInOptions && row.client_id && filteredProjects.length > 0) {
       console.log("Auto-clearing invalid project_id:", row.project_id, "isSelectedInOptions:", isSelectedInOptions);
-      handleChange("project_id", "");
+      handleChange("project_id", null);
     }
   }, [row.client_id, isSelectedInOptions]);
 
@@ -132,9 +143,9 @@ export default function WorkLogRow({
           <div>
             <label className="text-xs font-medium text-slate-500 mb-1 block">顧客 <span className="text-red-400">*</span></label>
             <Select 
-              value={row.client_id || "_none"} 
+              value={row.client_id || ""} 
               onValueChange={v => {
-                const clientId = v === "_none" ? "" : v;
+                const clientId = v === "" ? null : v;
                 handleChange("client_id", clientId);
               }}
             >
@@ -142,7 +153,7 @@ export default function WorkLogRow({
                 <SelectValue placeholder="顧客を選択" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="_none">— 選択してください —</SelectItem>
+                <SelectItem value={null}>— 選択してください —</SelectItem>
                 {filteredClients.map(c => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
@@ -160,7 +171,7 @@ export default function WorkLogRow({
             <Select 
               value={currentProjectValue} 
               onValueChange={v => {
-                const projectId = v === "" ? "" : String(v);
+                const projectId = v === "" ? null : String(v);
                 handleChange("project_id", projectId);
               }}
               disabled={!row.client_id}

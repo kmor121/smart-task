@@ -18,9 +18,9 @@ import useMasterData from "../components/hooks/useMasterData";
 import WorkLogRow from "../components/dailylog/WorkLogRow";
 
 const emptyRow = () => ({
-  client_id: "",
+  client_id: null,
   client_name: "",
-  project_id: "",
+  project_id: null,
   project_name: "",
   is_temporary_project: false,
   work_category_id: "",
@@ -246,9 +246,9 @@ export default function DailyLog() {
         user_email: user.email,
         user_name: user.full_name,
         department_code: user.department_code || "",
-        client_id: r.client_id || "",
+        client_id: r.client_id || null,
         client_name: r.client_name || "",
-        project_id: r.project_id || "",
+        project_id: r.project_id || null,
         project_name: r.project_name || "",
         is_temporary_project: r.is_temporary_project || false,
         work_category_id: r.work_category_id,
