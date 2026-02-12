@@ -413,11 +413,12 @@ export default function DailyLog() {
                   setNewProjectForm({ name: "" });
                   setSelectedRowForNewProject(null);
                 }}
+                disabled={saving}
               >
                 キャンセル
               </Button>
-              <Button onClick={saveNewProject}>
-                作成
+              <Button onClick={saveNewProject} disabled={saving}>
+                {saving ? "作成中..." : "作成"}
               </Button>
             </div>
           </div>
