@@ -276,9 +276,14 @@ export default function AdminData() {
               <label className="text-sm font-medium text-slate-700 mb-1 block">顧客コード</label>
               <Input value={clientForm.code} onChange={e => setClientForm({ ...clientForm, code: e.target.value })} />
             </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-slate-700">プルダウンに表示</label>
-              <Switch checked={clientForm.is_active} onCheckedChange={v => setClientForm({ ...clientForm, is_active: v })} />
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-slate-700">日報入力に表示</label>
+                <Switch checked={clientForm.is_active} onCheckedChange={v => setClientForm({ ...clientForm, is_active: v })} />
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                {clientForm.is_active ? "日報入力（/DailyLog）の選択肢に表示されます" : "非表示になります（過去の日報データは消えません）"}
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -303,9 +308,14 @@ export default function AdminData() {
               <label className="text-sm font-medium text-slate-700 mb-1 block">顧客名 <span className="text-red-500">*</span></label>
               <Input value={projectForm.client_name} onChange={e => setProjectForm({ ...projectForm, client_name: e.target.value })} />
             </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-slate-700">プルダウンに表示</label>
-              <Switch checked={projectForm.is_active} onCheckedChange={v => setProjectForm({ ...projectForm, is_active: v })} />
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-slate-700">日報入力に表示</label>
+                <Switch checked={projectForm.is_active} onCheckedChange={v => setProjectForm({ ...projectForm, is_active: v })} />
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                {projectForm.is_active ? "日報入力（/DailyLog）の選択肢に表示されます" : "非表示になります（過去の日報データは消えません）"}
+              </p>
             </div>
           </div>
           <DialogFooter>
