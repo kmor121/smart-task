@@ -55,23 +55,70 @@ export default function DailyLog() {
     enabled: !!user?.email,
   });
 
-  // 既存ログが変わったらrowsを更新
+  // データクリーンアップ（一度だけ実行）
+  useEffect(() => {
+    const cleanupData = async () => {
+      if (!user?.email) return;
+      
+      try {
+        const allLogs = await base44.entities.WorkLog.filter({ user_email: user.email });
+        const needsCleanup = allLogs.filter(log => {
+          const pid = log.project_id;
+          const cid = log.client_id;
+          return pid === "null" || pid === "_none" || pid === "" ||
+                 cid === "null" || cid === "_none" || cid === "" ||
+                 (typeof pid === "object" && pid !== null) ||
+                 (typeof cid === "object" && cid !== null);
+        });
+        
+        if (needsCleanup.length > 0) {
+          console.log("Cleaning up", needsCleanup.length, "WorkLog records");
+          for (const log of needsCleanup) {
+            const cleanProject = typeof log.project_id === "object" ? log.project_id?.id : log.project_id;
+            const cleanClient = typeof log.client_id === "object" ? log.client_id?.id : log.client_id;
+            
+            await base44.entities.WorkLog.update(log.id, {
+              project_id: (cleanProject && cleanProject !== "null" && cleanProject !== "_none") ? cleanProject : null,
+              client_id: (cleanClient && cleanClient !== "null" && cleanClient !== "_none") ? cleanClient : null,
+            });
+          }
+          queryClient.invalidateQueries({ queryKey: ["workLogs"] });
+        }
+      } catch (error) {
+        console.error("Cleanup failed:", error);
+      }
+    };
+    
+    cleanupData();
+  }, [user?.email]);
+
+  // 既存ログが変わったらrowsを更新（正規化処理を追加）
   useEffect(() => {
     if (existingLogs.length > 0) {
-      setRows(existingLogs.map(log => ({
-        id: log.id,
-        client_id: log.client_id || "",
-        client_name: log.client_name || "",
-        project_id: log.project_id || "",
-        project_name: log.project_name || "",
-        is_temporary_project: log.is_temporary_project || false,
-        work_category_id: log.work_category_id || "",
-        work_category_name: log.work_category_name || "",
-        is_revision: log.is_revision || false,
-        duration_minutes: log.duration_minutes || 0,
-        description: log.description || "",
-        status: log.status || "下書き",
-      })));
+      setRows(existingLogs.map(log => {
+        // project_id と client_id を正規化
+        const normalizeId = (id) => {
+          if (!id) return null;
+          if (typeof id === "object") return id.id || null;
+          if (id === "null" || id === "_none" || id === "") return null;
+          return String(id);
+        };
+        
+        return {
+          id: log.id,
+          client_id: normalizeId(log.client_id),
+          client_name: log.client_name || "",
+          project_id: normalizeId(log.project_id),
+          project_name: log.project_name || "",
+          is_temporary_project: log.is_temporary_project || false,
+          work_category_id: log.work_category_id || "",
+          work_category_name: log.work_category_name || "",
+          is_revision: log.is_revision || false,
+          duration_minutes: log.duration_minutes || 0,
+          description: log.description || "",
+          status: log.status || "下書き",
+        };
+      }));
     } else {
       setRows([emptyRow()]);
     }
@@ -87,11 +134,15 @@ export default function DailyLog() {
     setRows(prev => prev.filter((_, i) => i !== index));
   };
 
-  // 新規案件作成
+  // 新規案件作成（顧客未選択でも可能）
   const handleCreateNewProject = async (rowIndex) => {
-    console.log("open new project modal", { rowIndex });
     setSelectedRowForNewProject(rowIndex);
-    setNewProjectForm({ client_name: "", name: "" });
+    // 該当行に顧客が既に選択されていればプリセット
+    const currentRow = rows[rowIndex];
+    const presetClient = currentRow?.client_id ? 
+      clients.find(c => c.id === currentRow.client_id)?.name || "" : "";
+    
+    setNewProjectForm({ client_name: presetClient, name: "" });
     setNewProjectDialogOpen(true);
   };
 
@@ -107,7 +158,7 @@ export default function DailyLog() {
     try {
       // 同名顧客をチェック
       let clientId;
-      let clientName = newProjectForm.client_name;
+      let clientName = newProjectForm.client_name.trim();
       const existingClient = clients.find(c => c.name === clientName);
       
       if (existingClient) {
@@ -123,7 +174,7 @@ export default function DailyLog() {
 
       // 案件を作成
       const response = await base44.functions.invoke('createProject', {
-        name: newProjectForm.name,
+        name: newProjectForm.name.trim(),
         client_id: clientId,
         status: "仮案件"
       });
@@ -135,22 +186,23 @@ export default function DailyLog() {
         await queryClient.invalidateQueries({ queryKey: ['masterData'] });
         await queryClient.refetchQueries({ queryKey: ['masterData'] });
         
-        // 該当行に自動選択
+        // 該当行に自動選択（文字列IDで統一）
         handleRowChange(selectedRowForNewProject, {
           ...rows[selectedRowForNewProject],
-          client_id: clientId,
+          client_id: String(clientId),
           client_name: clientName,
-          project_id: newProject.id,
+          project_id: String(newProject.id),
           project_name: newProject.name,
           is_temporary_project: true
         });
 
-        toast.success("顧客と案件を作成しました");
+        toast.success("案件を作成しました");
         setNewProjectDialogOpen(false);
         setNewProjectForm({ client_name: "", name: "" });
         setSelectedRowForNewProject(null);
       }
     } catch (error) {
+      console.error("Failed to create project:", error);
       toast.error("作成できませんでした");
     } finally {
       setSaving(false);

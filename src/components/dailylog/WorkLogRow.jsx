@@ -25,6 +25,7 @@ export default function WorkLogRow({
     if (field === "client_id") {
       const client = clients.find(c => c.id === value);
       updated.client_name = client?.name || "";
+      updated.client_id = value ? String(value) : null;
       // 顧客変更時は必ず案件をクリア
       updated.project_id = null;
       updated.project_name = "";
@@ -39,13 +40,13 @@ export default function WorkLogRow({
         updated.project_name = "";
         updated.is_temporary_project = false;
       } else {
-        // 選択時
-        const project = projects.find(p => p.id === value);
+        // 選択時（必ず文字列で保存）
+        const project = projects.find(p => p.id === String(value));
         if (project) {
-          updated.project_id = project.id;
+          updated.project_id = String(project.id);
           updated.project_name = project.name;
           updated.client_name = project.client_name || updated.client_name;
-          updated.client_id = project.client_id || updated.client_id;
+          updated.client_id = project.client_id ? String(project.client_id) : updated.client_id;
           updated.is_temporary_project = project.status === "仮案件";
         } else {
           // 存在しない場合はクリア
@@ -66,16 +67,6 @@ export default function WorkLogRow({
     onChange(index, updated);
   };
 
-  // 文字列 "null" を自動補正
-  useEffect(() => {
-    if (row.project_id === "null" || row.client_id === "null") {
-      const corrected = { ...row };
-      if (row.project_id === "null") corrected.project_id = null;
-      if (row.client_id === "null") corrected.client_id = null;
-      onChange(index, corrected);
-    }
-  }, [row.project_id, row.client_id]);
-
   // アクティブな顧客のみ
   const filteredClients = clients.filter(c => c.is_active === true);
 
@@ -83,28 +74,29 @@ export default function WorkLogRow({
   const filteredProjects = projects.filter(p => {
     if (p.is_active !== true) return false;
     if (!row.client_id) return false;
-    return p.client_id === row.client_id;
+    return String(p.client_id) === String(row.client_id);
   });
 
-  // 案件 options の value(id) 配列を作成
-  const projectOptionsIds = filteredProjects.map(p => p.id);
+  // 案件 options の value(id) 配列を作成（文字列に統一）
+  const projectOptionsIds = filteredProjects.map(p => String(p.id));
   
   // 選択中の project_id が options に存在するかチェック
-  const isSelectedInOptions = row.project_id && row.project_id !== "null" && projectOptionsIds.includes(row.project_id);
+  const normalizedProjectId = row.project_id ? String(row.project_id) : null;
+  const isSelectedInOptions = normalizedProjectId && projectOptionsIds.includes(normalizedProjectId);
   
   // value は必ず Project.id（文字列）または空文字列
-  const currentProjectValue = (row.project_id && isSelectedInOptions) ? String(row.project_id) : "";
+  const currentProjectValue = isSelectedInOptions ? normalizedProjectId : "";
   
-  // 必須判定（営業部のみ案件が必須）
-  const isProjectInvalid = isSales && (!row.project_id || row.project_id === "null");
+  // 必須判定（営業部のみ案件が必須 かつ 未選択 or options に存在しない）
+  const isProjectInvalid = isSales && (!normalizedProjectId || !isSelectedInOptions);
 
   // 無効な project_id を自動的にクリア（顧客変更時または案件が無効になった時）
   useEffect(() => {
-    if (row.project_id && row.project_id !== "null" && !isSelectedInOptions && row.client_id && filteredProjects.length > 0) {
-      console.log("Auto-clearing invalid project_id:", row.project_id, "isSelectedInOptions:", isSelectedInOptions);
+    if (normalizedProjectId && !isSelectedInOptions && row.client_id) {
+      console.log("Auto-clearing invalid project_id:", normalizedProjectId);
       handleChange("project_id", null);
     }
-  }, [row.client_id, isSelectedInOptions]);
+  }, [row.client_id, normalizedProjectId, isSelectedInOptions]);
 
   // ユーザーの部署に合った作業区分 + 共通区分
   const filteredCategories = workCategories.filter(c => {
