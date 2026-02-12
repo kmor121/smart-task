@@ -387,6 +387,14 @@ export default function DailyLog() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">
+                顧客
+              </label>
+              <div className="px-3 py-2 bg-slate-50 rounded-md text-sm text-slate-700">
+                {selectedRowForNewProject !== null ? rows[selectedRowForNewProject]?.client_name || "—" : "—"}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">
                 案件名 <span className="text-red-500">*</span>
               </label>
               <Input
@@ -395,23 +403,13 @@ export default function DailyLog() {
                 placeholder="案件名を入力"
               />
             </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700 mb-1 block">
-                顧客名 <span className="text-red-500">*</span>
-              </label>
-              <Input
-                value={newProjectForm.client_name}
-                onChange={(e) => setNewProjectForm({ ...newProjectForm, client_name: e.target.value })}
-                placeholder="顧客名を入力"
-              />
-            </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
                   setNewProjectDialogOpen(false);
-                  setNewProjectForm({ name: "", client_name: "" });
+                  setNewProjectForm({ name: "" });
                   setSelectedRowForNewProject(null);
                 }}
               >
