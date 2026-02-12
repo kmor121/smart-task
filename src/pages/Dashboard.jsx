@@ -22,8 +22,15 @@ export default function Dashboard() {
   });
 
   const { data: workLogs = [], isLoading } = useQuery({
-    queryKey: ["dashboardLogs"],
-    queryFn: () => base44.entities.WorkLog.list("-work_date", 5000),
+    queryKey: ["dashboardLogs", user?.email],
+    queryFn: () => {
+      // 管理者は全員分、非管理者は自分のみ
+      if (isAdmin) {
+        return base44.entities.WorkLog.list("-work_date", 5000);
+      } else {
+        return base44.entities.WorkLog.filter({ user_email: user.email });
+      }
+    },
     enabled: !!user,
   });
 
@@ -34,11 +41,9 @@ export default function Dashboard() {
       if (filters.endDate && log.work_date > filters.endDate) return false;
       if (filters.clientId && log.client_id !== filters.clientId) return false;
       if (filters.departmentCode && log.department_code !== filters.departmentCode) return false;
-      // 一般ユーザーは自分のログのみ
-      if (isGeneral && log.user_email !== user?.email) return false;
       return true;
     });
-  }, [workLogs, filters, isGeneral, user]);
+  }, [workLogs, filters]);
 
   // 案件ごとの集計
   const projectStats = useMemo(() => {
@@ -78,11 +83,29 @@ export default function Dashboard() {
 
   if (!user) return null;
 
+  // 非管理者は自分の日報へリダイレクト
+  if (!isAdmin) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">アクセス権限がありません</h2>
+          <p className="text-sm text-slate-500 mb-4">このページは管理者のみ閲覧できます</p>
+          <button
+            onClick={() => window.location.href = "/"}
+            className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800"
+          >
+            日報入力に戻る
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">ダッシュボード</h1>
-        <p className="text-sm text-slate-500 mt-1">案件別の工数集計</p>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">みんなの日報</h1>
+        <p className="text-sm text-slate-500 mt-1">全員の工数集計</p>
       </div>
 
       {/* Filters */}

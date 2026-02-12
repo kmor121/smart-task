@@ -45,7 +45,7 @@ export default function Layout({ children, currentPageName }) {
 
   const navItems = [
     { name: "日報入力", page: "DailyLog", icon: ClipboardList, show: true },
-    { name: "ダッシュボード", page: "Dashboard", icon: BarChart3, show: true },
+    { name: "みんなの日報", page: "Dashboard", icon: BarChart3, show: isAdmin },
     { name: "案件管理", page: "Projects", icon: FolderKanban, show: canManageProjects },
     { name: "仮案件付替", page: "Reassign", icon: ArrowLeftRight, show: canReassign },
     { name: "マスタ管理", page: "MasterData", icon: Settings, show: isAdmin },
