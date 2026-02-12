@@ -128,17 +128,12 @@ export default function WorkLogRow({
               </SelectContent>
               </Select>
               <button
-              type="button"
-              onClick={onCreateNewProject}
-              disabled={!row.client_id}
-              className={`text-xs mt-1 inline-flex items-center gap-1 ${
-                !row.client_id 
-                  ? "text-slate-300 cursor-not-allowed" 
-                  : "text-blue-600 hover:text-blue-700 cursor-pointer"
-              }`}
+                type="button"
+                onClick={onCreateNewProject}
+                className="text-xs text-blue-600 hover:text-blue-700 mt-1 inline-flex items-center gap-1 cursor-pointer"
               >
-              <Plus className="w-3 h-3" />
-              新規案件
+                <Plus className="w-3 h-3" />
+                新規案件
               </button>
               </div>
               )}

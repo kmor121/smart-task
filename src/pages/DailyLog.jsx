@@ -37,7 +37,7 @@ export default function DailyLog() {
   const navigate = useNavigate();
   
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
-  const [newProjectForm, setNewProjectForm] = useState({ name: "" });
+  const [newProjectForm, setNewProjectForm] = useState({ client_name: "", name: "" });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -91,52 +91,63 @@ export default function DailyLog() {
   const handleCreateNewProject = async (rowIndex) => {
     console.log("open new project modal", { rowIndex });
     setSelectedRowForNewProject(rowIndex);
-    setNewProjectForm({ name: "" });
+    setNewProjectForm({ client_name: "", name: "" });
     setNewProjectDialogOpen(true);
   };
 
   const saveNewProject = async () => {
-    if (!newProjectForm.name) {
-      toast.error("案件名は必須です");
+    if (!newProjectForm.client_name || !newProjectForm.name) {
+      toast.error("顧客名と案件名は必須です");
       return;
     }
 
     if (selectedRowForNewProject === null) return;
 
-    const currentRow = rows[selectedRowForNewProject];
-    if (!currentRow.client_id) {
-      toast.error("顧客が選択されていません");
-      return;
-    }
-
     setSaving(true);
     try {
+      // 同名顧客をチェック
+      let clientId;
+      let clientName = newProjectForm.client_name;
+      const existingClient = clients.find(c => c.name === clientName);
+      
+      if (existingClient) {
+        clientId = existingClient.id;
+      } else {
+        // 顧客を新規作成
+        const newClient = await base44.entities.Client.create({
+          name: clientName,
+          is_active: true
+        });
+        clientId = newClient.id;
+      }
+
+      // 案件を作成
       const response = await base44.functions.invoke('createProject', {
         name: newProjectForm.name,
-        client_id: currentRow.client_id,
+        client_id: clientId,
         status: "仮案件"
       });
 
       if (response.data?.success && response.data?.project) {
         const newProject = response.data.project;
         
-        // プロジェクト一覧を再取得して完了を待つ
+        // マスタデータを再取得して完了を待つ
         await queryClient.invalidateQueries({ queryKey: ['masterData'] });
         await queryClient.refetchQueries({ queryKey: ['masterData'] });
         
         // 該当行に自動選択
         handleRowChange(selectedRowForNewProject, {
-          ...currentRow,
+          ...rows[selectedRowForNewProject],
+          client_id: clientId,
+          client_name: clientName,
           project_id: newProject.id,
           project_name: newProject.name,
-          client_id: newProject.client_id,
-          client_name: newProject.client_name,
           is_temporary_project: true
         });
 
-        toast.success("新規案件を作成しました");
+        toast.success("顧客と案件を作成しました");
         setNewProjectDialogOpen(false);
-        setNewProjectForm({ name: "" });
+        setNewProjectForm({ client_name: "", name: "" });
         setSelectedRowForNewProject(null);
       }
     } catch (error) {
@@ -388,11 +399,13 @@ export default function DailyLog() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">
-                顧客
+                顧客名 <span className="text-red-500">*</span>
               </label>
-              <div className="px-3 py-2 bg-slate-50 rounded-md text-sm text-slate-700">
-                {selectedRowForNewProject !== null ? rows[selectedRowForNewProject]?.client_name || "—" : "—"}
-              </div>
+              <Input
+                value={newProjectForm.client_name}
+                onChange={(e) => setNewProjectForm({ ...newProjectForm, client_name: e.target.value })}
+                placeholder="顧客名を入力"
+              />
             </div>
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">
@@ -410,7 +423,7 @@ export default function DailyLog() {
                 variant="outline"
                 onClick={() => {
                   setNewProjectDialogOpen(false);
-                  setNewProjectForm({ name: "" });
+                  setNewProjectForm({ client_name: "", name: "" });
                   setSelectedRowForNewProject(null);
                 }}
                 disabled={saving}
