@@ -14,15 +14,22 @@ Deno.serve(async (req) => {
       return Response.json({ error: '営業部のみ案件を作成できます' }, { status: 403 });
     }
 
-    const { name, client_name, status } = await req.json();
+    const { name, client_id, status } = await req.json();
 
-    if (!name || !client_name) {
-      return Response.json({ error: '案件名と顧客名は必須です' }, { status: 400 });
+    if (!name || !client_id) {
+      return Response.json({ error: '案件名と顧客IDは必須です' }, { status: 400 });
+    }
+
+    // 顧客情報を取得
+    const client = await base44.asServiceRole.entities.Client.get(client_id);
+    if (!client) {
+      return Response.json({ error: '顧客が見つかりません' }, { status: 404 });
     }
 
     const projectData = {
       name,
-      client_name,
+      client_id,
+      client_name: client.name,
       status: status || '仮案件',
       owner_user_id: user.id,
       owner_user_name: user.full_name,
