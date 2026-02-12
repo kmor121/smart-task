@@ -78,53 +78,55 @@ export default function WorkLogRow({
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        {/* 顧客 */}
-        <div>
-          <label className="text-xs font-medium text-slate-500 mb-1 block">顧客 <span className="text-red-400">*</span></label>
-          <Select value={row.client_id || "_none"} onValueChange={v => handleChange("client_id", v === "_none" ? "" : v)}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="顧客を選択" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="_none">— 選択してください —</SelectItem>
-              {filteredClients.map(c => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* 顧客（営業のみ表示） */}
+        {isSales && (
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1 block">顧客 <span className="text-red-400">*</span></label>
+            <Select value={row.client_id || "_none"} onValueChange={v => handleChange("client_id", v === "_none" ? "" : v)}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="顧客を選択" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">— 選択してください —</SelectItem>
+                {filteredClients.map(c => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-        {/* 案件 */}
-        <div>
-          <label className="text-xs font-medium text-slate-500 mb-1 block">案件 <span className="text-red-400">*</span></label>
-          <Select 
-            value={row.project_id || "_none"} 
-            onValueChange={v => handleChange("project_id", v === "_none" ? "" : v)}
-            disabled={!row.client_id}
-          >
-            <SelectTrigger className={`h-9 text-sm ${row.is_temporary_project ? "border-amber-300 bg-amber-50" : ""}`}>
-              <SelectValue placeholder={row.client_id ? "案件を選択" : "顧客を選択してください"} />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredProjects.length === 0 ? (
-                <div className="px-2 py-6 text-center text-sm text-slate-400">
-                  該当する案件がありません
-                </div>
-              ) : (
-                <>
-                  <SelectItem value="_none">— 選択してください —</SelectItem>
-                  {filteredProjects.map(p => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.status === "仮案件" ? "⚠️ " : ""}{p.name}
-                    </SelectItem>
-                  ))}
-                </>
-              )}
-            </SelectContent>
-          </Select>
-          {isSales && (
+        {/* 案件（営業のみ表示） */}
+        {isSales && (
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1 block">案件 <span className="text-red-400">*</span></label>
+            <Select 
+              value={row.project_id || "_none"} 
+              onValueChange={v => handleChange("project_id", v === "_none" ? "" : v)}
+              disabled={!row.client_id}
+            >
+              <SelectTrigger className={`h-9 text-sm ${row.is_temporary_project ? "border-amber-300 bg-amber-50" : ""}`}>
+                <SelectValue placeholder={row.client_id ? "案件を選択" : "顧客を選択してください"} />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredProjects.length === 0 ? (
+                  <div className="px-2 py-6 text-center text-sm text-slate-400">
+                    該当する案件がありません
+                  </div>
+                ) : (
+                  <>
+                    <SelectItem value="_none">— 選択してください —</SelectItem>
+                    {filteredProjects.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.status === "仮案件" ? "⚠️ " : ""}{p.name}
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+              </SelectContent>
+            </Select>
             <button
               type="button"
               onClick={onCreateNewProject}
@@ -133,8 +135,8 @@ export default function WorkLogRow({
               <Plus className="w-3 h-3" />
               新規案件
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 

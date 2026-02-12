@@ -187,10 +187,22 @@ export default function DailyLog() {
   };
 
   const saveWorkLogs = async (submitStatus) => {
-    // バリデーション
-    const invalid = rows.some(r => !r.client_id || !r.project_id || !r.work_category_id || !r.duration_minutes);
+    // バリデーション（部署別）
+    let invalid = false;
+    let errorMessage = "";
+    
+    if (isSales) {
+      // 営業部：顧客・案件・作業区分・作業時間が必須
+      invalid = rows.some(r => !r.client_id || !r.project_id || !r.work_category_id || !r.duration_minutes);
+      errorMessage = "顧客・案件・作業区分・作業時間は必須です";
+    } else {
+      // その他の部署：作業区分・作業時間が必須
+      invalid = rows.some(r => !r.work_category_id || !r.duration_minutes);
+      errorMessage = "作業区分・作業時間は必須です";
+    }
+    
     if (invalid) {
-      toast.error("顧客・案件・作業区分・作業時間は必須です");
+      toast.error(errorMessage);
       return;
     }
 
@@ -215,11 +227,11 @@ export default function DailyLog() {
         user_email: user.email,
         user_name: user.full_name,
         department_code: user.department_code || "",
-        client_id: r.client_id,
-        client_name: r.client_name,
-        project_id: r.project_id,
-        project_name: r.project_name,
-        is_temporary_project: r.is_temporary_project,
+        client_id: r.client_id || "",
+        client_name: r.client_name || "",
+        project_id: r.project_id || "",
+        project_name: r.project_name || "",
+        is_temporary_project: r.is_temporary_project || false,
         work_category_id: r.work_category_id,
         work_category_name: r.work_category_name,
         is_revision: r.is_revision,
@@ -344,7 +356,12 @@ export default function DailyLog() {
             </Button>
             <Button
               onClick={() => saveWorkLogs("提出済")}
-              disabled={saving || submitting || rows.some(r => !r.client_id || !r.project_id || !r.work_category_id || !r.duration_minutes)}
+              disabled={saving || submitting || rows.some(r => {
+                if (isSales) {
+                  return !r.client_id || !r.project_id || !r.work_category_id || !r.duration_minutes;
+                }
+                return !r.work_category_id || !r.duration_minutes;
+              })}
               className="flex-1 gap-2 bg-slate-900 hover:bg-slate-800"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
