@@ -84,14 +84,17 @@ export default function WorkLogRow({
   
   // value は必ず Project.id（文字列）または空文字列
   const currentProjectValue = (row.project_id && isSelectedInOptions) ? String(row.project_id) : "";
+  
+  // 必須判定（営業部のみ案件が必須）
+  const isProjectInvalid = isSales && !row.project_id;
 
-  // 無効な project_id を自動的にクリア
+  // 無効な project_id を自動的にクリア（顧客変更時または案件が無効になった時）
   useEffect(() => {
-    if (row.project_id && !isSelectedInOptions && row.client_id) {
-      console.log("Clearing invalid project_id:", row.project_id);
+    if (row.project_id && !isSelectedInOptions && row.client_id && filteredProjects.length > 0) {
+      console.log("Auto-clearing invalid project_id:", row.project_id, "isSelectedInOptions:", isSelectedInOptions);
       handleChange("project_id", "");
     }
-  }, [row.client_id, row.project_id, projectOptionsIds.length]);
+  }, [row.client_id, isSelectedInOptions]);
 
   // ユーザーの部署に合った作業区分 + 共通区分
   const filteredCategories = workCategories.filter(c => {
@@ -102,14 +105,17 @@ export default function WorkLogRow({
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 shadow-sm">
       {/* デバッグ表示（一時） */}
-      <div className="text-[10px] text-slate-400 font-mono bg-slate-50 p-2 rounded">
-        <div>clientId: {row.client_id || "null"}</div>
-        <div>projectId: {row.project_id || "null"}</div>
+      <div className="text-[10px] text-slate-400 font-mono bg-slate-50 p-2 rounded space-y-0.5">
+        <div className="font-bold text-slate-600">Debug Info (Row {index + 1})</div>
+        <div>row.project_id: "{row.project_id || "null"}"</div>
         <div>currentProjectValue: "{currentProjectValue}"</div>
-        <div>typeof projectId: {typeof row.project_id}</div>
-        <div>typeof currentProjectValue: {typeof currentProjectValue}</div>
-        <div>typeof firstOptionValue: {filteredProjects.length > 0 ? typeof filteredProjects[0].id : "N/A"}</div>
         <div>isSelectedInOptions: {String(isSelectedInOptions)}</div>
+        <div>isProjectInvalid: {String(isProjectInvalid)}</div>
+        <div className="pt-1 border-t border-slate-200">
+          <div>typeof row.project_id: {typeof row.project_id}</div>
+          <div>typeof currentProjectValue: {typeof currentProjectValue}</div>
+          <div>filteredProjects.length: {filteredProjects.length}</div>
+        </div>
       </div>
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">本日の作業 {index + 1}</span>
