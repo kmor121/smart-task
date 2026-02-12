@@ -82,8 +82,8 @@ export default function WorkLogRow({
   // 選択中の project_id が options に存在するかチェック
   const isSelectedInOptions = row.project_id && projectOptionsIds.includes(row.project_id);
   
-  // value は必ず Project.id（文字列）または "_none"
-  const currentProjectValue = isSelectedInOptions ? row.project_id : "_none";
+  // value は必ず Project.id（文字列）または空文字列
+  const currentProjectValue = (row.project_id && isSelectedInOptions) ? String(row.project_id) : "";
 
   // 無効な project_id を自動的にクリア
   useEffect(() => {
@@ -105,9 +105,10 @@ export default function WorkLogRow({
       <div className="text-[10px] text-slate-400 font-mono bg-slate-50 p-2 rounded">
         <div>clientId: {row.client_id || "null"}</div>
         <div>projectId: {row.project_id || "null"}</div>
-        <div>currentProjectValue: {currentProjectValue}</div>
-        <div>filteredProjects.length: {filteredProjects.length}</div>
-        <div>projectOptionsIds: [{projectOptionsIds.join(", ")}]</div>
+        <div>currentProjectValue: "{currentProjectValue}"</div>
+        <div>typeof projectId: {typeof row.project_id}</div>
+        <div>typeof currentProjectValue: {typeof currentProjectValue}</div>
+        <div>typeof firstOptionValue: {filteredProjects.length > 0 ? typeof filteredProjects[0].id : "N/A"}</div>
         <div>isSelectedInOptions: {String(isSelectedInOptions)}</div>
       </div>
       <div className="flex items-center justify-between">
@@ -153,7 +154,7 @@ export default function WorkLogRow({
             <Select 
               value={currentProjectValue} 
               onValueChange={v => {
-                const projectId = v === "_none" ? "" : v;
+                const projectId = v === "" ? "" : String(v);
                 handleChange("project_id", projectId);
               }}
               disabled={!row.client_id}
@@ -162,14 +163,14 @@ export default function WorkLogRow({
                 <SelectValue placeholder={row.client_id ? "案件を選択" : "顧客を選択してください"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="_none">— 選択してください —</SelectItem>
+                <SelectItem value={null}>— 選択してください —</SelectItem>
                 {filteredProjects.length === 0 ? (
                   <div className="px-2 py-6 text-center text-sm text-slate-400">
                     該当する案件がありません
                   </div>
                 ) : (
                   filteredProjects.map(p => (
-                    <SelectItem key={p.id} value={p.id}>
+                    <SelectItem key={p.id} value={String(p.id)}>
                       {p.status === "仮案件" ? "⚠️ " : ""}{p.name}
                     </SelectItem>
                   ))
