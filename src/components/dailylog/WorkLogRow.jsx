@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,6 +63,13 @@ export default function WorkLogRow({
   // 選択中の project_id が filteredProjects に存在しない場合はクリア
   const isValidProjectId = row.project_id && filteredProjects.some(p => p.id === row.project_id);
   const currentProjectValue = isValidProjectId ? row.project_id : "_none";
+
+  // 無効な project_id を自動的にクリア
+  useEffect(() => {
+    if (row.project_id && !isValidProjectId) {
+      handleChange("project_id", "");
+    }
+  }, [row.client_id, projects]);
 
   // ユーザーの部署に合った作業区分 + 共通区分
   const filteredCategories = workCategories.filter(c => {
