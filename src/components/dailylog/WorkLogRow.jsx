@@ -25,7 +25,7 @@ export default function WorkLogRow({
     if (field === "client_id") {
       const client = clients.find(c => c.id === value);
       updated.client_name = client?.name || "";
-      // 顧客変更時は案件をクリア
+      // 顧客変更時は必ず案件をクリア
       updated.project_id = "";
       updated.project_name = "";
       updated.is_temporary_project = false;
@@ -33,11 +33,27 @@ export default function WorkLogRow({
 
     // 案件変更時
     if (field === "project_id") {
-      const project = projects.find(p => p.id === value);
-      updated.project_name = project?.name || "";
-      updated.client_name = project?.client_name || "";
-      updated.client_id = project?.client_id || "";
-      updated.is_temporary_project = project?.status === "仮案件";
+      if (value === "" || value === "_none") {
+        // クリア時
+        updated.project_id = "";
+        updated.project_name = "";
+        updated.is_temporary_project = false;
+      } else {
+        // 選択時
+        const project = projects.find(p => p.id === value);
+        if (project) {
+          updated.project_id = project.id;
+          updated.project_name = project.name;
+          updated.client_name = project.client_name || updated.client_name;
+          updated.client_id = project.client_id || updated.client_id;
+          updated.is_temporary_project = project.status === "仮案件";
+        } else {
+          // 存在しない場合はクリア
+          updated.project_id = "";
+          updated.project_name = "";
+          updated.is_temporary_project = false;
+        }
+      }
     }
 
     // 作業区分変更時
@@ -60,16 +76,18 @@ export default function WorkLogRow({
     return p.client_id === row.client_id;
   });
 
-  // 選択中の project_id が filteredProjects に存在しない場合はクリア
+  // 選択中の project_id が filteredProjects に存在するかチェック
   const isValidProjectId = row.project_id && filteredProjects.some(p => p.id === row.project_id);
-  const currentProjectValue = isValidProjectId ? row.project_id : "_none";
+  
+  // value は必ず Project.id（文字列）または "_none"
+  const currentProjectValue = (row.project_id && isValidProjectId) ? row.project_id : "_none";
 
   // 無効な project_id を自動的にクリア
   useEffect(() => {
-    if (row.project_id && !isValidProjectId) {
+    if (row.project_id && !isValidProjectId && row.client_id) {
       handleChange("project_id", "");
     }
-  }, [row.client_id, projects]);
+  }, [row.client_id, row.project_id, projects.length]);
 
   // ユーザーの部署に合った作業区分 + 共通区分
   const filteredCategories = workCategories.filter(c => {
