@@ -21,7 +21,7 @@ export default function useCurrentUser() {
 
   const isAdmin = user?.app_role === "管理者";
   const isSubAdmin = user?.app_role === "副管理者";
-  const isSales = user?.app_role === "営業";
+  const isSales = user?.department_code === "sales";
   const isGeneral = user?.app_role === "一般";
   const canManageProjects = isAdmin || isSubAdmin || isSales;
   const canReassign = isAdmin || isSubAdmin;
