@@ -71,23 +71,27 @@ export default function WorkLogRow({
 
   // アクティブな案件のみ、選択中の顧客に紐づく案件のみ
   const filteredProjects = projects.filter(p => {
-    if (!p.is_active) return false;
+    if (p.is_active !== true) return false;
     if (!row.client_id) return false;
     return p.client_id === row.client_id;
   });
 
-  // 選択中の project_id が filteredProjects に存在するかチェック
-  const isValidProjectId = row.project_id && filteredProjects.some(p => p.id === row.project_id);
+  // 案件 options の value(id) 配列を作成
+  const projectOptionsIds = filteredProjects.map(p => p.id);
+  
+  // 選択中の project_id が options に存在するかチェック
+  const isSelectedInOptions = row.project_id && projectOptionsIds.includes(row.project_id);
   
   // value は必ず Project.id（文字列）または "_none"
-  const currentProjectValue = (row.project_id && isValidProjectId) ? row.project_id : "_none";
+  const currentProjectValue = isSelectedInOptions ? row.project_id : "_none";
 
   // 無効な project_id を自動的にクリア
   useEffect(() => {
-    if (row.project_id && !isValidProjectId && row.client_id) {
+    if (row.project_id && !isSelectedInOptions && row.client_id) {
+      console.log("Clearing invalid project_id:", row.project_id);
       handleChange("project_id", "");
     }
-  }, [row.client_id, row.project_id, projects.length]);
+  }, [row.client_id, row.project_id, projectOptionsIds.length]);
 
   // ユーザーの部署に合った作業区分 + 共通区分
   const filteredCategories = workCategories.filter(c => {
@@ -97,6 +101,13 @@ export default function WorkLogRow({
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 shadow-sm">
+      {/* デバッグ表示（一時） */}
+      <div className="text-[10px] text-slate-400 font-mono bg-slate-50 p-2 rounded">
+        <div>clientId: {row.client_id || "null"}</div>
+        <div>projectId: {row.project_id || "null"}</div>
+        <div>projectOptionsIds: [{projectOptionsIds.join(", ")}]</div>
+        <div>isSelectedInOptions: {String(isSelectedInOptions)}</div>
+      </div>
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">本日の作業 {index + 1}</span>
         {canRemove && (
@@ -140,19 +151,17 @@ export default function WorkLogRow({
                 <SelectValue placeholder={row.client_id ? "案件を選択" : "顧客を選択してください"} />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="_none">— 選択してください —</SelectItem>
                 {filteredProjects.length === 0 ? (
                   <div className="px-2 py-6 text-center text-sm text-slate-400">
                     該当する案件がありません
                   </div>
                 ) : (
-                  <>
-                    <SelectItem value="_none">— 選択してください —</SelectItem>
-                    {filteredProjects.map(p => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.status === "仮案件" ? "⚠️ " : ""}{p.name}
-                      </SelectItem>
-                    ))}
-                  </>
+                  filteredProjects.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.status === "仮案件" ? "⚠️ " : ""}{p.name}
+                    </SelectItem>
+                  ))
                 )}
               </SelectContent>
               </Select>
