@@ -267,7 +267,7 @@ export default function DailyLog() {
       invalid = rows.some(r => !r.client_id || !r.project_id || !r.work_category_id || !r.duration_minutes);
       errorMessage = "顧客・案件・作業区分・作業時間は必須です";
     } else {
-      // その他の部署：作業区分・作業時間が必須
+      // その他の部署：作業区分・作業時間が必須（顧客・案件は任意）
       invalid = rows.some(r => !r.work_category_id || !r.duration_minutes);
       errorMessage = "作業区分・作業時間は必須です";
     }
