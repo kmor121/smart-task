@@ -81,8 +81,8 @@ export default function Layout({ children, currentPageName }) {
 
   const navItems = [
     { name: "日報入力", page: "DailyLog", icon: ClipboardList, show: true },
-    { name: "自分の日報", page: "MyLogs", icon: FileText, show: true, badge: pendingCount },
-    { name: "みんなの日報", page: "Dashboard", icon: BarChart3, show: isAdmin },
+    { name: "日報一覧", page: "MyLogs", icon: FileText, show: true, badge: pendingCount },
+    { name: "工数集計", page: "Dashboard", icon: BarChart3, show: isAdmin },
     { name: "案件管理", page: "Projects", icon: FolderKanban, show: canManageProjects },
     { name: "仮案件付替", page: "Reassign", icon: ArrowLeftRight, show: canReassign },
     { name: "管理者機能", page: "AdminData", icon: Settings, show: isAdmin },
