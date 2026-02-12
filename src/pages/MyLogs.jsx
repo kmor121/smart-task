@@ -220,14 +220,7 @@ export default function MyLogs() {
                       {group.logs.map((log, idx) => (
                         <tr key={idx} className="border-b border-slate-50">
                           <td className="py-2.5 text-slate-700">{log.client_name || "—"}</td>
-                          <td className="py-2.5">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-slate-800">{log.project_name || "—"}</span>
-                              {log.is_temporary_project && (
-                                <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] px-1">仮</Badge>
-                              )}
-                            </div>
-                          </td>
+                          <td className="py-2.5 text-slate-800">{log.project_name || "—"}</td>
                           <td className="py-2.5">
                             <div className="flex items-center gap-1.5">
                               <span className="text-slate-700">{log.work_category_name}</span>
