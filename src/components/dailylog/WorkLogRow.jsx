@@ -158,7 +158,12 @@ export default function WorkLogRow({
         {/* 案件（営業のみ表示） */}
         {isSales && (
           <div>
-            <label className="text-xs font-medium text-slate-500 mb-1 block">案件 <span className="text-red-400">*</span></label>
+            <label className="text-xs font-medium text-slate-500 mb-1 flex items-center gap-1.5">
+              案件 <span className="text-red-400">*</span>
+              {isProjectInvalid && (
+                <span className="text-red-500 text-xs">⚠️</span>
+              )}
+            </label>
             <Select 
               value={currentProjectValue} 
               onValueChange={v => {
@@ -167,7 +172,10 @@ export default function WorkLogRow({
               }}
               disabled={!row.client_id}
             >
-              <SelectTrigger className={`h-9 text-sm ${row.is_temporary_project ? "border-amber-300 bg-amber-50" : ""}`}>
+              <SelectTrigger className={`h-9 text-sm ${
+                isProjectInvalid ? "border-red-300 bg-red-50" : 
+                row.is_temporary_project ? "border-amber-300 bg-amber-50" : ""
+              }`}>
                 <SelectValue placeholder={row.client_id ? "案件を選択" : "顧客を選択してください"} />
               </SelectTrigger>
               <SelectContent>
@@ -191,7 +199,7 @@ export default function WorkLogRow({
               className="text-xs text-blue-600 hover:text-blue-700 mt-1 inline-flex items-center gap-1 cursor-pointer"
             >
               <Plus className="w-3 h-3" />
-              新規案件
+              新規案件作成
             </button>
           </div>
         )}
