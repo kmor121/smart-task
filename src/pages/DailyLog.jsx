@@ -87,10 +87,15 @@ export default function DailyLog() {
     setRows(prev => prev.filter((_, i) => i !== index));
   };
 
-  // 前回の作業をコピー
+  // 新規案件作成
   const handleCreateNewProject = async (rowIndex) => {
+    const currentRow = rows[rowIndex];
+    if (!currentRow.client_id) {
+      toast.error("先に顧客を選択してください");
+      return;
+    }
     setSelectedRowForNewProject(rowIndex);
-    setNewProjectForm({ name: "", client_name: "" });
+    setNewProjectForm({ name: "" });
     setNewProjectDialogOpen(true);
   };
 
