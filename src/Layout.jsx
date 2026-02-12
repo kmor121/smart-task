@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
 import useCurrentUser from "./components/hooks/useCurrentUser";
@@ -12,14 +12,50 @@ import {
   Menu,
   X,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Layout({ children, currentPageName }) {
   const { user, loading, isAdmin, isSubAdmin, canManageProjects, canReassign } = useCurrentUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // 未提出＋変更あり件数を取得
+  const { data: myLogs = [] } = useQuery({
+    queryKey: ["myLogsCount", user?.email],
+    queryFn: async () => {
+      if (!user?.email) return [];
+      return await base44.entities.WorkLog.filter({ user_email: user.email });
+    },
+    enabled: !!user?.email,
+  });
+
+  const pendingCount = useMemo(() => {
+    const grouped = {};
+    myLogs.forEach(log => {
+      if (!grouped[log.work_date]) grouped[log.work_date] = [];
+      grouped[log.work_date].push(log);
+    });
+
+    let count = 0;
+    Object.entries(grouped).forEach(([date, logs]) => {
+      const hasSubmitted = logs.some(l => l.status === "提出済" || l.status === "承認済");
+      const submittedLog = logs.find(l => l.submitted_at);
+      
+      if (!hasSubmitted) {
+        count++; // 未提出
+      } else if (submittedLog) {
+        const submittedAt = new Date(submittedLog.submitted_at).getTime();
+        const hasChanges = logs.some(l => new Date(l.updated_date).getTime() > submittedAt);
+        if (hasChanges) count++; // 提出済（変更あり）
+      }
+    });
+    return count;
+  }, [myLogs]);
 
   if (loading) {
     return (
@@ -45,6 +81,7 @@ export default function Layout({ children, currentPageName }) {
 
   const navItems = [
     { name: "日報入力", page: "DailyLog", icon: ClipboardList, show: true },
+    { name: "自分の日報", page: "MyLogs", icon: FileText, show: true, badge: pendingCount },
     { name: "みんなの日報", page: "Dashboard", icon: BarChart3, show: isAdmin },
     { name: "案件管理", page: "Projects", icon: FolderKanban, show: canManageProjects },
     { name: "仮案件付替", page: "Reassign", icon: ArrowLeftRight, show: canReassign },
@@ -108,7 +145,10 @@ export default function Layout({ children, currentPageName }) {
                 >
                   <item.icon className="w-4 h-4 flex-shrink-0" />
                   {item.name}
-                  {active && <ChevronRight className="w-3 h-3 ml-auto opacity-50" />}
+                  {item.badge > 0 && (
+                    <Badge className="ml-auto bg-red-500 text-white text-[10px] h-5 px-1.5">{item.badge}</Badge>
+                  )}
+                  {active && !item.badge && <ChevronRight className="w-3 h-3 ml-auto opacity-50" />}
                 </Link>
               );
             })}

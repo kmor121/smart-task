@@ -40,7 +40,12 @@ export default function DailyLog() {
   const [newProjectForm, setNewProjectForm] = useState({ client_name: "", name: "" });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  // URLパラメータから日付を取得
+  const urlParams = new URLSearchParams(window.location.search);
+  const dateParam = urlParams.get("date");
+  const initialDate = dateParam ? new Date(dateParam) : new Date();
+  
+  const [selectedDate, setSelectedDate] = useState(initialDate);
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
   const [rows, setRows] = useState([emptyRow()]);

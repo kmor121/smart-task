@@ -52,6 +52,7 @@ import Dashboard from './pages/Dashboard';
 import MasterData from './pages/MasterData';
 import Projects from './pages/Projects';
 import Reassign from './pages/Reassign';
+import MyLogs from './pages/MyLogs';
 import __Layout from './Layout.jsx';
 
 
@@ -61,6 +62,7 @@ export const PAGES = {
     "MasterData": MasterData,
     "Projects": Projects,
     "Reassign": Reassign,
+    "MyLogs": MyLogs,
 }
 
 export const pagesConfig = {
