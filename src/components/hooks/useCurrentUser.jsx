@@ -19,7 +19,7 @@ export default function useCurrentUser() {
     load();
   }, []);
 
-  const isAdmin = user?.app_role === "管理者";
+  const isAdmin = user?.role === "admin" || user?.isOwner === true || user?.isAdmin === true;
   const isSubAdmin = user?.app_role === "副管理者";
   const isSales = user?.department_code === "sales";
   const isGeneral = user?.app_role === "一般";
