@@ -18,9 +18,9 @@ import useMasterData from "../components/hooks/useMasterData";
 import WorkLogRow from "../components/dailylog/WorkLogRow";
 
 const emptyRow = () => ({
-  client_id: null,
+  client_id: "",
   client_name: "",
-  project_id: null,
+  project_id: "",
   project_name: "",
   is_temporary_project: false,
   work_category_id: "",
@@ -96,11 +96,11 @@ export default function DailyLog() {
   useEffect(() => {
     if (existingLogs.length > 0) {
       setRows(existingLogs.map(log => {
-        // project_id と client_id を正規化
+        // project_id と client_id を正規化（""に統一）
         const normalizeId = (id) => {
-          if (!id) return null;
-          if (typeof id === "object") return id.id || null;
-          if (id === "null" || id === "_none" || id === "") return null;
+          if (!id) return "";
+          if (typeof id === "object") return id.id ? String(id.id) : "";
+          if (id === "null" || id === "_none" || id === "") return "";
           return String(id);
         };
         
@@ -126,12 +126,17 @@ export default function DailyLog() {
 
   const handleRowChange = (index, updated) => {
     setRows(prev => prev.map((r, i) => (i === index ? updated : r)));
+    setHasLocalChanges(true);
   };
 
-  const addRow = () => setRows(prev => [...prev, emptyRow()]);
+  const addRow = () => {
+    setRows(prev => [...prev, emptyRow()]);
+    setHasLocalChanges(true);
+  };
 
   const removeRow = (index) => {
     setRows(prev => prev.filter((_, i) => i !== index));
+    setHasLocalChanges(true);
   };
 
   // 新規案件作成（顧客未選択でも可能）
@@ -236,9 +241,9 @@ export default function DailyLog() {
         const updated = { ...rows[0] };
 
         if (project?.is_active !== false) {
-          updated.client_id = latestLog.client_id || "";
+          updated.client_id = String(latestLog.client_id || "");
           updated.client_name = latestLog.client_name || "";
-          updated.project_id = latestLog.project_id || "";
+          updated.project_id = String(latestLog.project_id || "");
           updated.project_name = latestLog.project_name || "";
           updated.is_temporary_project = latestLog.is_temporary_project || false;
         }
@@ -250,6 +255,7 @@ export default function DailyLog() {
         }
 
         handleRowChange(0, updated);
+        setHasLocalChanges(true);
         toast.success("前日の作業をコピーしました");
       }
     } catch (error) {
@@ -309,6 +315,7 @@ export default function DailyLog() {
         duration_minutes: r.duration_minutes,
         description: r.description,
         status: submitStatus,
+        submitted_at: submitStatus === "提出済" ? new Date().toISOString() : null,
       }));
 
       await base44.entities.WorkLog.bulkCreate(records);
@@ -335,6 +342,22 @@ export default function DailyLog() {
   const mins = totalMinutes % 60;
 
   const isSubmitted = existingLogs.some(l => l.status === "提出済" || l.status === "承認済");
+  
+  // 提出/再提出判定
+  const [hasLocalChanges, setHasLocalChanges] = useState(false);
+  useEffect(() => {
+    if (existingLogs.length > 0) {
+      setHasLocalChanges(false);
+    }
+  }, [existingLogs]);
+  
+  useEffect(() => {
+    if (existingLogs.length > 0) {
+      setHasLocalChanges(true);
+    }
+  }, [rows]);
+  
+  const isResubmit = isSubmitted && hasLocalChanges;
 
   if (!user) return null;
 
@@ -427,16 +450,27 @@ export default function DailyLog() {
             </Button>
             <Button
               onClick={() => saveWorkLogs("提出済")}
-              disabled={saving || submitting || rows.some(r => {
-                if (isSales) {
-                  return !r.client_id || !r.project_id || !r.work_category_id || !r.duration_minutes;
-                }
-                return !r.work_category_id || !r.duration_minutes;
-              })}
+              disabled={
+                saving || 
+                submitting || 
+                (isSubmitted && !hasLocalChanges) ||
+                rows.some(r => {
+                  if (isSales) {
+                    return !r.client_id || !r.project_id || !r.work_category_id || !r.duration_minutes;
+                  }
+                  return !r.work_category_id || !r.duration_minutes;
+                })
+              }
               className="flex-1 gap-2 bg-slate-900 hover:bg-slate-800"
             >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              {submitting ? "提出中…" : "提出"}
+              {submitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isSubmitted && !hasLocalChanges ? (
+                <CheckCircle2 className="w-4 h-4" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              {submitting ? "提出中…" : isSubmitted && !hasLocalChanges ? "提出済" : isResubmit ? "再提出" : "提出"}
             </Button>
           </div>
         </>

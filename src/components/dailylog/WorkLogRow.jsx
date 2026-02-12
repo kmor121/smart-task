@@ -25,9 +25,9 @@ export default function WorkLogRow({
     if (field === "client_id") {
       const client = clients.find(c => c.id === value);
       updated.client_name = client?.name || "";
-      updated.client_id = value ? String(value) : null;
+      updated.client_id = value || "";
       // 顧客変更時は必ず案件をクリア
-      updated.project_id = null;
+      updated.project_id = "";
       updated.project_name = "";
       updated.is_temporary_project = false;
     }
@@ -36,7 +36,7 @@ export default function WorkLogRow({
     if (field === "project_id") {
       if (!value || value === "") {
         // クリア時
-        updated.project_id = null;
+        updated.project_id = "";
         updated.project_name = "";
         updated.is_temporary_project = false;
       } else {
@@ -50,7 +50,7 @@ export default function WorkLogRow({
           updated.is_temporary_project = project.status === "仮案件";
         } else {
           // 存在しない場合はクリア
-          updated.project_id = null;
+          updated.project_id = "";
           updated.project_name = "";
           updated.is_temporary_project = false;
         }
@@ -81,7 +81,7 @@ export default function WorkLogRow({
   const projectOptionsIds = filteredProjects.map(p => String(p.id));
   
   // 選択中の project_id が options に存在するかチェック
-  const normalizedProjectId = row.project_id ? String(row.project_id) : null;
+  const normalizedProjectId = row.project_id || "";
   const isSelectedInOptions = normalizedProjectId && projectOptionsIds.includes(normalizedProjectId);
   
   // value は必ず Project.id（文字列）または空文字列
@@ -89,12 +89,15 @@ export default function WorkLogRow({
   
   // 必須判定（営業部のみ案件が必須 かつ 未選択 or options に存在しない）
   const isProjectInvalid = isSales && (!normalizedProjectId || !isSelectedInOptions);
+  
+  // 顧客必須判定（営業部のみ）
+  const isClientInvalid = isSales && !row.client_id;
 
   // 無効な project_id を自動的にクリア（顧客変更時または案件が無効になった時）
   useEffect(() => {
     if (normalizedProjectId && !isSelectedInOptions && row.client_id) {
       console.log("Auto-clearing invalid project_id:", normalizedProjectId);
-      handleChange("project_id", null);
+      handleChange("project_id", "");
     }
   }, [row.client_id, normalizedProjectId, isSelectedInOptions]);
 
@@ -152,10 +155,7 @@ export default function WorkLogRow({
           </label>
           <Select 
             value={currentProjectValue} 
-            onValueChange={v => {
-              const projectId = v === "" ? null : String(v);
-              handleChange("project_id", projectId);
-            }}
+            onValueChange={v => handleChange("project_id", v || "")}
             disabled={!row.client_id}
           >
             <SelectTrigger className={`h-9 text-sm ${
