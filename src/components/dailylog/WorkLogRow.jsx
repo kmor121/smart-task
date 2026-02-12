@@ -106,19 +106,6 @@ export default function WorkLogRow({
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 shadow-sm">
-      {/* デバッグ表示（一時） */}
-      <div className="text-[10px] text-slate-400 font-mono bg-slate-50 p-2 rounded space-y-0.5">
-        <div className="font-bold text-slate-600">Debug Info (Row {index + 1})</div>
-        <div>row.project_id: "{row.project_id || "null"}"</div>
-        <div>currentProjectValue: "{currentProjectValue}"</div>
-        <div>isSelectedInOptions: {String(isSelectedInOptions)}</div>
-        <div>isProjectInvalid: {String(isProjectInvalid)}</div>
-        <div className="pt-1 border-t border-slate-200">
-          <div>typeof row.project_id: {typeof row.project_id}</div>
-          <div>typeof currentProjectValue: {typeof currentProjectValue}</div>
-          <div>filteredProjects.length: {filteredProjects.length}</div>
-        </div>
-      </div>
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">本日の作業 {index + 1}</span>
         {canRemove && (
