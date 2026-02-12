@@ -60,6 +60,10 @@ export default function WorkLogRow({
     return p.client_id === row.client_id;
   });
 
+  // 選択中の project_id が filteredProjects に存在しない場合はクリア
+  const isValidProjectId = row.project_id && filteredProjects.some(p => p.id === row.project_id);
+  const currentProjectValue = isValidProjectId ? row.project_id : "_none";
+
   // ユーザーの部署に合った作業区分 + 共通区分
   const filteredCategories = workCategories.filter(c => {
     if (!c.is_active) return false;
@@ -103,7 +107,7 @@ export default function WorkLogRow({
           <div>
             <label className="text-xs font-medium text-slate-500 mb-1 block">案件 <span className="text-red-400">*</span></label>
             <Select 
-              value={row.project_id || "_none"} 
+              value={currentProjectValue} 
               onValueChange={v => handleChange("project_id", v === "_none" ? "" : v)}
               disabled={!row.client_id}
             >
