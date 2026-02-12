@@ -172,7 +172,7 @@ export default function AdminData() {
                           <p className="font-medium text-slate-800">{client.name}</p>
                           {client.code && <p className="text-xs text-slate-500">コード: {client.code}</p>}
                         </div>
-                        {!client.is_active && <Badge variant="outline" className="text-slate-500">アーカイブ</Badge>}
+                        {!client.is_active && <Badge variant="outline" className="text-slate-500">非表示中</Badge>}
                       </div>
                       <Button variant="ghost" size="sm" onClick={() => handleEditClient(client)} className="gap-1.5">
                         <Edit2 className="w-3.5 h-3.5" />
@@ -208,7 +208,7 @@ export default function AdminData() {
                           <p className="font-medium text-slate-800">{project.name}</p>
                           <p className="text-xs text-slate-500">顧客: {project.client_name} · ステータス: {project.status}</p>
                         </div>
-                        {!project.is_active && <Badge variant="outline" className="text-slate-500">アーカイブ</Badge>}
+                        {!project.is_active && <Badge variant="outline" className="text-slate-500">非表示中</Badge>}
                       </div>
                       <Button variant="ghost" size="sm" onClick={() => handleEditProject(project)} className="gap-1.5">
                         <Edit2 className="w-3.5 h-3.5" />
@@ -277,7 +277,7 @@ export default function AdminData() {
               <Input value={clientForm.code} onChange={e => setClientForm({ ...clientForm, code: e.target.value })} />
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-slate-700">有効</label>
+              <label className="text-sm font-medium text-slate-700">プルダウンに表示</label>
               <Switch checked={clientForm.is_active} onCheckedChange={v => setClientForm({ ...clientForm, is_active: v })} />
             </div>
           </div>
@@ -304,7 +304,7 @@ export default function AdminData() {
               <Input value={projectForm.client_name} onChange={e => setProjectForm({ ...projectForm, client_name: e.target.value })} />
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-slate-700">有効</label>
+              <label className="text-sm font-medium text-slate-700">プルダウンに表示</label>
               <Switch checked={projectForm.is_active} onCheckedChange={v => setProjectForm({ ...projectForm, is_active: v })} />
             </div>
           </div>
