@@ -37,7 +37,7 @@ export default function DailyLog() {
   const navigate = useNavigate();
   
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
-  const [newProjectForm, setNewProjectForm] = useState({ name: "", client_name: "" });
+  const [newProjectForm, setNewProjectForm] = useState({ name: "" });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
