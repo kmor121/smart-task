@@ -122,7 +122,13 @@ export default function WorkLogRow({
         {isSales && (
           <div>
             <label className="text-xs font-medium text-slate-500 mb-1 block">顧客 <span className="text-red-400">*</span></label>
-            <Select value={row.client_id || "_none"} onValueChange={v => handleChange("client_id", v === "_none" ? "" : v)}>
+            <Select 
+              value={row.client_id || "_none"} 
+              onValueChange={v => {
+                const clientId = v === "_none" ? "" : v;
+                handleChange("client_id", clientId);
+              }}
+            >
               <SelectTrigger className="h-9 text-sm">
                 <SelectValue placeholder="顧客を選択" />
               </SelectTrigger>
@@ -144,7 +150,10 @@ export default function WorkLogRow({
             <label className="text-xs font-medium text-slate-500 mb-1 block">案件 <span className="text-red-400">*</span></label>
             <Select 
               value={currentProjectValue} 
-              onValueChange={v => handleChange("project_id", v === "_none" ? "" : v)}
+              onValueChange={v => {
+                const projectId = v === "_none" ? "" : v;
+                handleChange("project_id", projectId);
+              }}
               disabled={!row.client_id}
             >
               <SelectTrigger className={`h-9 text-sm ${row.is_temporary_project ? "border-amber-300 bg-amber-50" : ""}`}>
@@ -164,17 +173,17 @@ export default function WorkLogRow({
                   ))
                 )}
               </SelectContent>
-              </Select>
-              <button
-                type="button"
-                onClick={onCreateNewProject}
-                className="text-xs text-blue-600 hover:text-blue-700 mt-1 inline-flex items-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3 h-3" />
-                新規案件
-              </button>
-              </div>
-              )}
+            </Select>
+            <button
+              type="button"
+              onClick={onCreateNewProject}
+              className="text-xs text-blue-600 hover:text-blue-700 mt-1 inline-flex items-center gap-1 cursor-pointer"
+            >
+              <Plus className="w-3 h-3" />
+              新規案件
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
