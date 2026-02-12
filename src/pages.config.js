@@ -50,9 +50,10 @@
 import DailyLog from './pages/DailyLog';
 import Dashboard from './pages/Dashboard';
 import MasterData from './pages/MasterData';
+import MyLogs from './pages/MyLogs';
 import Projects from './pages/Projects';
 import Reassign from './pages/Reassign';
-import MyLogs from './pages/MyLogs';
+import AdminData from './pages/AdminData';
 import __Layout from './Layout.jsx';
 
 
@@ -60,9 +61,10 @@ export const PAGES = {
     "DailyLog": DailyLog,
     "Dashboard": Dashboard,
     "MasterData": MasterData,
+    "MyLogs": MyLogs,
     "Projects": Projects,
     "Reassign": Reassign,
-    "MyLogs": MyLogs,
+    "AdminData": AdminData,
 }
 
 export const pagesConfig = {

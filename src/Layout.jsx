@@ -85,7 +85,7 @@ export default function Layout({ children, currentPageName }) {
     { name: "みんなの日報", page: "Dashboard", icon: BarChart3, show: isAdmin },
     { name: "案件管理", page: "Projects", icon: FolderKanban, show: canManageProjects },
     { name: "仮案件付替", page: "Reassign", icon: ArrowLeftRight, show: canReassign },
-    { name: "マスタ管理", page: "MasterData", icon: Settings, show: isAdmin },
+    { name: "管理者機能", page: "AdminData", icon: Settings, show: isAdmin },
   ];
 
   const deptLabel = user.department_code || "未設定";
