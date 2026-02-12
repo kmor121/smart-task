@@ -109,6 +109,7 @@ export default function DailyLog() {
       return;
     }
 
+    setSaving(true);
     try {
       const response = await base44.functions.invoke('createProject', {
         name: newProjectForm.name,
@@ -119,15 +120,17 @@ export default function DailyLog() {
       if (response.data?.success && response.data?.project) {
         const newProject = response.data.project;
         
-        // プロジェクト一覧を再取得
-        await queryClient.invalidateQueries({ queryKey: ['projects'] });
+        // プロジェクト一覧を再取得して完了を待つ
         await queryClient.invalidateQueries({ queryKey: ['masterData'] });
+        await queryClient.refetchQueries({ queryKey: ['masterData'] });
         
         // 該当行に自動選択
         handleRowChange(selectedRowForNewProject, {
           ...currentRow,
           project_id: newProject.id,
           project_name: newProject.name,
+          client_id: newProject.client_id,
+          client_name: newProject.client_name,
           is_temporary_project: true
         });
 
@@ -137,7 +140,9 @@ export default function DailyLog() {
         setSelectedRowForNewProject(null);
       }
     } catch (error) {
-      toast.error(error.response?.data?.error || "案件の作成に失敗しました");
+      toast.error("作成できませんでした");
+    } finally {
+      setSaving(false);
     }
   };
 
