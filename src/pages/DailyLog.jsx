@@ -273,15 +273,6 @@ export default function DailyLog() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">日報入力</h1>
         <p className="text-sm text-slate-500 mt-1">作業内容を記録してください</p>
-
-        {/* デバッグ情報（開発用） */}
-        <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs space-y-1">
-          <div><strong>Debug:</strong></div>
-          <div>Email: {user?.email || "N/A"}</div>
-          <div>Department Code: {user?.department_code || "N/A"}</div>
-          <div>App Role: {user?.app_role || "N/A"}</div>
-          <div>isSales: {isSales ? "true" : "false"}</div>
-        </div>
       </div>
 
       {/* Date picker & summary */}
