@@ -100,15 +100,23 @@ export default function DailyLog() {
   };
 
   const saveNewProject = async () => {
-    if (!newProjectForm.name || !newProjectForm.client_name) {
-      toast.error("案件名と顧客名は必須です");
+    if (!newProjectForm.name) {
+      toast.error("案件名は必須です");
+      return;
+    }
+
+    if (selectedRowForNewProject === null) return;
+
+    const currentRow = rows[selectedRowForNewProject];
+    if (!currentRow.client_id) {
+      toast.error("顧客が選択されていません");
       return;
     }
 
     try {
       const response = await base44.functions.invoke('createProject', {
         name: newProjectForm.name,
-        client_name: newProjectForm.client_name,
+        client_id: currentRow.client_id,
         status: "仮案件"
       });
 
@@ -116,26 +124,20 @@ export default function DailyLog() {
         const newProject = response.data.project;
         
         // プロジェクト一覧を再取得
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
-        queryClient.invalidateQueries({ queryKey: ['masterData'] });
+        await queryClient.invalidateQueries({ queryKey: ['projects'] });
+        await queryClient.invalidateQueries({ queryKey: ['masterData'] });
         
         // 該当行に自動選択
-        if (selectedRowForNewProject !== null) {
-          // client_nameから該当するclientを検索
-          const matchedClient = clients.find(c => c.name === newProject.client_name);
-          handleRowChange(selectedRowForNewProject, {
-            ...rows[selectedRowForNewProject],
-            client_id: matchedClient?.id || "",
-            client_name: newProject.client_name,
-            project_id: newProject.id,
-            project_name: newProject.name,
-            is_temporary_project: true
-          });
-        }
+        handleRowChange(selectedRowForNewProject, {
+          ...currentRow,
+          project_id: newProject.id,
+          project_name: newProject.name,
+          is_temporary_project: true
+        });
 
         toast.success("新規案件を作成しました");
         setNewProjectDialogOpen(false);
-        setNewProjectForm({ name: "", client_name: "" });
+        setNewProjectForm({ name: "" });
         setSelectedRowForNewProject(null);
       }
     } catch (error) {
