@@ -89,17 +89,7 @@ export default function DailyLog() {
 
   // 新規案件作成
   const handleCreateNewProject = async (rowIndex) => {
-    console.log("開始: 新規案件モーダル", { rowIndex });
-    const currentRow = rows[rowIndex];
-    console.log("現在の行データ:", currentRow);
-    
-    if (!currentRow.client_id) {
-      console.log("顧客未選択のためモーダルを開かない");
-      toast.error("先に顧客を選択してください");
-      return;
-    }
-    
-    console.log("モーダルを開く");
+    console.log("open new project modal", { rowIndex });
     setSelectedRowForNewProject(rowIndex);
     setNewProjectForm({ name: "" });
     setNewProjectDialogOpen(true);
