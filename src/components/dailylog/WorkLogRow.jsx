@@ -187,7 +187,7 @@ export default function WorkLogRow({
                 ) : (
                   filteredProjects.map(p => (
                     <SelectItem key={p.id} value={String(p.id)}>
-                      {p.status === "仮案件" ? "⚠️ " : ""}{p.name}
+                      {p.status === "仮案件" ? "(仮) " : ""}{p.name}
                     </SelectItem>
                   ))
                 )}
