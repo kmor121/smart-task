@@ -9,8 +9,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    // 営業部のみ作成可能
-    if (user.department_code !== 'sales') {
+    // 営業部または管理者のみ作成可能
+    const isAdmin = user.role === 'admin' || user.isAdmin === true || user.isOwner === true;
+    if (user.department_code !== 'sales' && !isAdmin) {
       return Response.json({ error: '営業部のみ案件を作成できます' }, { status: 403 });
     }
 
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
       status: status || '仮案件',
       owner_user_id: user.id,
       owner_user_name: user.full_name,
-      department_code: 'sales',
+      department_code: user.department_code || 'sales',
       is_active: true
     };
 

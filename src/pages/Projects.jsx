@@ -21,7 +21,12 @@ export default function ProjectsPage() {
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
-      const result = await base44.entities.Project.filter({ is_active: true }, '-created_date');
+      // 管理者は全件、営業部は自分の案件のみ表示
+      const isAdmin = user.role === 'admin' || user.isAdmin === true || user.isOwner === true;
+      const filter = isAdmin 
+        ? { is_active: true }
+        : { is_active: true, department_code: 'sales' };
+      const result = await base44.entities.Project.filter(filter, '-created_date');
       return result;
     },
     enabled: !!user
