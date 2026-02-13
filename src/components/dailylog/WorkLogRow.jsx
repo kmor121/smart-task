@@ -101,10 +101,14 @@ export default function WorkLogRow({
     }
   }, [row.client_id, normalizedProjectId, isSelectedInOptions]);
 
+  // 部署コード正規化（design→production, print→printing）
+  const DEPT_ALIAS = { design: 'production', print: 'printing' };
+  const normalizedDeptCode = DEPT_ALIAS[userDepartmentCode] ?? userDepartmentCode;
+  
   // ユーザーの部署に合った作業区分 + 共通区分
   const filteredCategories = workCategories.filter(c => {
     if (!c.is_active) return false;
-    return c.department_code === "common" || c.department_code === userDepartmentCode;
+    return c.department_code === "common" || c.department_code === normalizedDeptCode;
   });
 
   return (
