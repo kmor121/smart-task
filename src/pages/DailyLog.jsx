@@ -16,6 +16,7 @@ import { createPageUrl } from "../utils";
 import useCurrentUser from "../components/hooks/useCurrentUser";
 import useMasterData from "../components/hooks/useMasterData";
 import WorkLogRow from "../components/dailylog/WorkLogRow";
+import EditProjectDialog from "../components/projects/EditProjectDialog";
 
 const emptyRow = () => ({
   client_id: "",
@@ -31,7 +32,7 @@ const emptyRow = () => ({
 });
 
 export default function DailyLog() {
-  const { user, isSales } = useCurrentUser();
+  const { user, isSales, canManageProjects } = useCurrentUser();
   const { clients, projects, workCategories } = useMasterData();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -39,6 +40,8 @@ export default function DailyLog() {
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [newProjectForm, setNewProjectForm] = useState({ client_name: "", name: "" });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [editProjectDialogOpen, setEditProjectDialogOpen] = useState(false);
+  const [editingProjectFromRow, setEditingProjectFromRow] = useState(null);
 
   // URLパラメータから日付を取得
   const urlParams = new URLSearchParams(window.location.search);
@@ -434,6 +437,14 @@ export default function DailyLog() {
                 onRemove={removeRow}
                 onCreateNewProject={() => handleCreateNewProject(index)}
                 canRemove={rows.length > 1}
+                canManageProjects={canManageProjects}
+                onEditProject={(projectId) => {
+                  const project = projects.find(p => p.id === projectId);
+                  if (project) {
+                    setEditingProjectFromRow(project);
+                    setEditProjectDialogOpen(true);
+                  }
+                }}
               />
             ))}
           </div>
@@ -536,6 +547,16 @@ export default function DailyLog() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 案件名編集モーダル */}
+      <EditProjectDialog
+        open={editProjectDialogOpen}
+        onOpenChange={setEditProjectDialogOpen}
+        project={editingProjectFromRow}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["projects"] });
+        }}
+      />
 
       {/* 提出完了モーダル */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>

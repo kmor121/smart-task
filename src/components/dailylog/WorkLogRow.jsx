@@ -16,7 +16,9 @@ export default function WorkLogRow({
   onChange,
   onRemove,
   onCreateNewProject,
-  canRemove
+  canRemove,
+  canManageProjects,
+  onEditProject
 }) {
   const handleChange = (field, value) => {
     const updated = { ...row, [field]: value };
