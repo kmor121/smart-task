@@ -92,6 +92,7 @@ export default function Layout({ children, currentPageName }) {
   const navItems = [
     { name: "日報入力", page: "DailyLog", icon: ClipboardList, show: true },
     { name: "日報一覧", page: "MyLogs", icon: FileText, show: true, badge: pendingCount },
+    { name: "部署の日報", page: "TeamDailyLog", icon: Users, show: isAdmin || isManager },
     { name: "工数集計", page: "Dashboard", icon: BarChart3, show: isAdmin || isManager },
     { name: "案件管理", page: "Projects", icon: FolderKanban, show: canManageProjects },
     { name: "仮案件付替", page: "Reassign", icon: ArrowLeftRight, show: canReassign },
