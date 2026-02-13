@@ -33,7 +33,7 @@ const emptyRow = () => ({
 
 export default function DailyLog() {
   const { user, isSales, canManageProjects } = useCurrentUser();
-  const { clients, projects, workCategories } = useMasterData();
+  const { clients, projects, workCategories, refreshProjects } = useMasterData();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   
@@ -553,8 +553,15 @@ export default function DailyLog() {
         open={editProjectDialogOpen}
         onOpenChange={setEditProjectDialogOpen}
         project={editingProjectFromRow}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["projects"] });
+        onSuccess={async () => {
+          // 案件一覧を再取得して即座に反映
+          await refreshProjects();
+          
+          // 選択中の案件IDを維持したまま、名前だけ更新
+          const updatedProject = projects.find(p => p.id === editingProjectFromRow?.id);
+          if (updatedProject) {
+            console.log('✅ Project name updated in dropdown:', updatedProject.name);
+          }
         }}
       />
 

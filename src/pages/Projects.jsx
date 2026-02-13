@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import useCurrentUser from "../components/hooks/useCurrentUser";
+import useMasterData from "../components/hooks/useMasterData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import EditProjectDialog from "../components/projects/EditProjectDialog";
 export default function ProjectsPage() {
   const { user, loading, isSales } = useCurrentUser();
   const queryClient = useQueryClient();
+  const { refreshProjects } = useMasterData();
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({ name: "", client_name: "", status: "見込み" });
@@ -228,7 +230,9 @@ export default function ProjectsPage() {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         project={editingProject}
-        onSuccess={() => {
+        onSuccess={async () => {
+          // 案件一覧を即座に再取得
+          await refreshProjects();
           queryClient.invalidateQueries({ queryKey: ["projects"] });
         }}
       />

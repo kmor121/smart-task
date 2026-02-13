@@ -26,6 +26,12 @@ export default function EditProjectDialog({ open, onOpenChange, project, onSucce
       return;
     }
 
+    console.log('💾 Saving project name:', { 
+      projectId: project.id, 
+      oldName: project.name, 
+      newName: trimmedName 
+    });
+
     setSaving(true);
     try {
       const response = await base44.functions.invoke("updateProject", {
@@ -33,16 +39,25 @@ export default function EditProjectDialog({ open, onOpenChange, project, onSucce
         name: trimmedName
       });
 
+      console.log('📥 Server response:', response.data);
+
       if (response.data.success) {
         toast.success("案件名を更新しました");
-        onSuccess?.();
+        
+        // 即時反映のため onSuccess を呼ぶ
+        if (onSuccess) {
+          await onSuccess();
+        }
+        
         onOpenChange(false);
       } else {
-        toast.error(response.data.error || "更新に失敗しました");
+        const errorMsg = response.data.error || "更新に失敗しました";
+        console.error('❌ Update failed:', errorMsg);
+        toast.error(errorMsg);
       }
     } catch (error) {
-      console.error("Failed to update project:", error);
-      toast.error("案件名の更新に失敗しました");
+      console.error("❌ Failed to update project:", error);
+      toast.error(`案件名の更新に失敗しました（詳細はコンソールを確認）`);
     } finally {
       setSaving(false);
     }
