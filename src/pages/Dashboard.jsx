@@ -38,17 +38,28 @@ export default function Dashboard() {
   // フィルタ適用
   const filteredLogs = useMemo(() => {
     return workLogs.filter(log => {
+      // 日付フィルタ
       if (filters.startDate && log.work_date < filters.startDate) return false;
       if (filters.endDate && log.work_date > filters.endDate) return false;
+      
+      // 顧客フィルタ
       if (filters.clientId && log.client_id !== filters.clientId) return false;
       
-      // 部署フィルタ：department_code で絞り込み
-      if (filters.departmentCode) {
-        // 既存データ互換：department_code が無い場合は department_name から逆引き
-        const logDeptCode = log.department_code || 
-          departments.find(d => d.name === log.department_name)?.code || "";
+      // 部署フィルタ：department_code で絞り込み（空文字なら全件）
+      if (filters.departmentCode && filters.departmentCode !== "") {
+        // まず department_code を取得、なければ department_name から逆引き
+        let logDeptCode = log.department_code;
         
-        if (logDeptCode !== filters.departmentCode) return false;
+        if (!logDeptCode && log.department_name) {
+          // 既存データ互換：name → code 変換
+          const dept = departments.find(d => d.name === log.department_name);
+          logDeptCode = dept?.code || "";
+        }
+        
+        // department_code が一致しない場合は除外
+        if (logDeptCode !== filters.departmentCode) {
+          return false;
+        }
       }
       
       return true;
@@ -91,6 +102,32 @@ export default function Dashboard() {
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   };
 
+  // デバッグ：部署データの可視化
+  const debugDepartmentData = useMemo(() => {
+    const codes = new Set();
+    const names = new Set();
+    const samples = [];
+    
+    workLogs.forEach(log => {
+      if (log.department_code) codes.add(log.department_code);
+      if (log.department_name) names.add(log.department_name);
+      if (samples.length < 3) {
+        samples.push({
+          id: log.id,
+          department_code: log.department_code || "(空)",
+          department_name: log.department_name || "(空)",
+          created_at: log.created_date
+        });
+      }
+    });
+    
+    return {
+      uniqueCodes: Array.from(codes),
+      uniqueNames: Array.from(names),
+      samples
+    };
+  }, [workLogs]);
+
   if (!user) return null;
 
   // 非管理者は自分の日報へリダイレクト
@@ -116,6 +153,30 @@ export default function Dashboard() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">工数集計</h1>
         <p className="text-sm text-slate-500 mt-1">全員の工数集計</p>
+        
+        {/* デバッグUI */}
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-xs space-y-2">
+          <div className="font-bold text-yellow-900">🔍 デバッグ情報（部署データ）</div>
+          <div>
+            <span className="font-semibold">選択中フィルタ：</span>
+            label={departments.find(d => d.code === filters.departmentCode)?.name || "すべて"} / 
+            value={filters.departmentCode || "(空)"}
+          </div>
+          <div>
+            <span className="font-semibold">department_code ユニーク値：</span>
+            {debugDepartmentData.uniqueCodes.join(", ") || "(なし)"}
+          </div>
+          <div>
+            <span className="font-semibold">department_name ユニーク値：</span>
+            {debugDepartmentData.uniqueNames.join(", ") || "(なし)"}
+          </div>
+          <div>
+            <span className="font-semibold">先頭3件サンプル：</span>
+            <pre className="mt-1 text-[10px] bg-white p-2 rounded overflow-auto">
+              {JSON.stringify(debugDepartmentData.samples, null, 2)}
+            </pre>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
