@@ -44,7 +44,13 @@ export default function DashboardFilters({ filters, onChange, clients, departmen
           <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="_all">すべて</SelectItem>
-            {departments.map(d => <SelectItem key={d.code} value={d.code}>{d.name}</SelectItem>)}
+            <SelectItem value="sales">営業部</SelectItem>
+            <SelectItem value="design">制作部</SelectItem>
+            <SelectItem value="print">印刷部</SelectItem>
+            <SelectItem value="binding">製本部</SelectItem>
+            <SelectItem value="general">総務部</SelectItem>
+            <SelectItem value="admin">管理者</SelectItem>
+            <SelectItem value="ict">ICT部</SelectItem>
           </SelectContent>
         </Select>
       </div>
