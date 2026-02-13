@@ -30,19 +30,6 @@ export default function TeamDailyLog() {
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
-  // アクセス制御
-  if (!userLoading && !isAdmin && !isManager) {
-    return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
-          <h2 className="text-lg font-semibold text-red-800 mb-2">アクセス権限がありません</h2>
-          <p className="text-sm text-red-600">この画面は部長または管理者のみアクセス可能です</p>
-        </div>
-      </div>
-    );
-  }
-
   // 部署の日報データを取得（キャッシュ無効化）
   const { data: teamData, isLoading, refetch } = useQuery({
     queryKey: ["teamDailyLogs", dateStr, departmentFilter],
@@ -102,10 +89,23 @@ export default function TeamDailyLog() {
     return m > 0 ? `${h}:${m.toString().padStart(2, '0')}` : `${h}:00`;
   };
 
+  // アクセス制御チェック（フック呼び出し後）
   if (userLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+      </div>
+    );
+  }
+
+  if (!isAdmin && !isManager) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+          <h2 className="text-lg font-semibold text-red-800 mb-2">アクセス権限がありません</h2>
+          <p className="text-sm text-red-600">この画面は部長または管理者のみアクセス可能です</p>
+        </div>
       </div>
     );
   }
