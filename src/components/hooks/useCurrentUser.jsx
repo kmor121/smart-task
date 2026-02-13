@@ -40,11 +40,12 @@ export default function useCurrentUser() {
   }, []);
 
   const isAdmin = user?.role === "admin" || user?.isOwner === true || user?.isAdmin === true;
+  const isManager = user?.role === "manager" || user?.app_role === "部長";
   const isSubAdmin = user?.app_role === "副管理者";
   const isSales = user?.department_code === "sales";
   const isGeneral = user?.app_role === "一般";
   const canManageProjects = isAdmin || isSubAdmin || isSales;
   const canReassign = isAdmin || isSubAdmin;
 
-  return { user, loading, isAdmin, isSubAdmin, isSales, isGeneral, canManageProjects, canReassign };
+  return { user, loading, isAdmin, isManager, isSubAdmin, isSales, isGeneral, canManageProjects, canReassign };
 }

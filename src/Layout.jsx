@@ -23,7 +23,7 @@ import { useQuery } from "@tanstack/react-query";
 import ImpersonateUserDialog from "./components/admin/ImpersonateUserDialog";
 
 export default function Layout({ children, currentPageName }) {
-  const { user, loading, isAdmin, isSubAdmin, canManageProjects, canReassign } = useCurrentUser();
+  const { user, loading, isAdmin, isManager, isSubAdmin, canManageProjects, canReassign } = useCurrentUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [impersonateDialogOpen, setImpersonateDialogOpen] = useState(false);
   
@@ -92,7 +92,7 @@ export default function Layout({ children, currentPageName }) {
   const navItems = [
     { name: "日報入力", page: "DailyLog", icon: ClipboardList, show: true },
     { name: "日報一覧", page: "MyLogs", icon: FileText, show: true, badge: pendingCount },
-    { name: "工数集計", page: "Dashboard", icon: BarChart3, show: isAdmin },
+    { name: "工数集計", page: "Dashboard", icon: BarChart3, show: isAdmin || isManager },
     { name: "案件管理", page: "Projects", icon: FolderKanban, show: canManageProjects },
     { name: "仮案件付替", page: "Reassign", icon: ArrowLeftRight, show: canReassign },
     { name: "管理者機能", page: "AdminData", icon: Settings, show: isAdmin },
