@@ -98,7 +98,9 @@ export default function Layout({ children, currentPageName }) {
     { name: "管理者機能", page: "AdminData", icon: Settings, show: isAdmin },
   ];
 
-  const showImpersonateOption = user?._realUser && (user._realUser.role === "admin" || user._realUser.isOwner || user._realUser.isAdmin);
+  // テストユーザー切替: 実ユーザー（なりすまし前）がadminかどうかで判定
+  const realUser = user?._realUser || user;
+  const showImpersonateOption = realUser && (realUser.role === "admin" || realUser.isOwner || realUser.isAdmin);
 
   const deptLabel = user.department_code || "未設定";
   const roleLabel = user.app_role || "一般";
