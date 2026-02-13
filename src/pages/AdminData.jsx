@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, Plus, Edit2, Archive, AlertTriangle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import useCurrentUser from "../components/hooks/useCurrentUser";
+import SeedTestUsersButton from "../components/admin/SeedTestUsersButton";
 
 export default function AdminData() {
   const { user, isAdmin } = useCurrentUser();
