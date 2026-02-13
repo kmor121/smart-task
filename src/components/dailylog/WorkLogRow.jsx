@@ -216,12 +216,15 @@ export default function WorkLogRow({
           <label className="text-xs font-medium text-slate-500 mb-1 block">作業時間（分） <span className="text-red-400">*</span></label>
           <Input
             type="number"
-            min="1"
+            min="0"
             max="999"
-            value={row.duration_minutes || ""}
-            onChange={e => handleChange("duration_minutes", parseInt(e.target.value) || 0)}
+            value={row.duration_minutes ?? ""}
+            onChange={e => {
+              const val = e.target.value;
+              handleChange("duration_minutes", val === "" ? 0 : parseInt(val) || 0);
+            }}
             className="h-9 text-sm"
-            placeholder="60"
+            placeholder="0"
           />
         </div>
         </div>
