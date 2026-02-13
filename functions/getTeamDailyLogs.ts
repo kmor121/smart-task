@@ -23,9 +23,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: '日付は必須です' }, { status: 400 });
     }
 
-    // 部長の場合、自部署のみに制限
+    // 部長の場合、自部署のみに強制固定（引数を無視）
     let targetDepartment = department_code;
     if (isManager && !isAdmin) {
+      targetDepartment = user.department_code; // 必ず自部署
+    }
+    
+    // 部長の場合は必ず自部署のみ（リクエストの department_code は無視）
+    if (isManager && !isAdmin && department_code !== user.department_code) {
+      console.log(`⚠️ Manager ${user.email} attempted to access ${department_code}, forcing to own department: ${user.department_code}`);
       targetDepartment = user.department_code;
     }
 
