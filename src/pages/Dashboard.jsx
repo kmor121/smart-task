@@ -13,7 +13,7 @@ import ProjectTimeChart from "../components/dashboard/ProjectTimeChart";
 
 export default function Dashboard() {
   const { user, isAdmin, isSales, isGeneral } = useCurrentUser();
-  const { clients, departments } = useMasterData();
+  const { clients, departments, projects } = useMasterData();
 
   const [filters, setFilters] = useState({
     startDate: format(startOfMonth(new Date()), "yyyy-MM-dd"),
@@ -78,16 +78,19 @@ export default function Dashboard() {
     });
   }, [workLogs, filters, departments]);
 
-  // 案件ごとの集計
+  // 案件ごとの集計（最新の案件名を projects から取得してリネーム反映）
   const projectStats = useMemo(() => {
     const map = {};
     filteredLogs.forEach(log => {
       const pid = log.project_id;
       if (!map[pid]) {
+        // projects から最新の案件名を取得（リネームされても反映される）
+        const projectData = projects.find(p => p.id === pid);
+        
         map[pid] = {
           project_id: pid,
-          project_name: log.project_name || "不明",
-          client_name: log.client_name || "",
+          project_name: projectData?.name || log.project_name || "不明",
+          client_name: projectData?.client_name || log.client_name || "",
           is_temporary: log.is_temporary_project || false,
           total_minutes: 0,
           revision_minutes: 0,
@@ -102,7 +105,7 @@ export default function Dashboard() {
     return Object.values(map)
       .map(s => ({ ...s, departments: [...s.departments] }))
       .sort((a, b) => b.total_minutes - a.total_minutes);
-  }, [filteredLogs]);
+  }, [filteredLogs, projects]);
 
   const totalMinutes = filteredLogs.reduce((s, l) => s + (l.duration_minutes || 0), 0);
   const revisionMinutes = filteredLogs.filter(l => l.is_revision).reduce((s, l) => s + (l.duration_minutes || 0), 0);
