@@ -12,22 +12,24 @@ import DashboardFilters from "../components/dashboard/DashboardFilters";
 import ProjectTimeChart from "../components/dashboard/ProjectTimeChart";
 
 export default function Dashboard() {
-  const { user, isAdmin, isSales, isGeneral } = useCurrentUser();
+  const { user, isAdmin, isManager, isSales, isGeneral } = useCurrentUser();
   const { clients, departments, projects } = useMasterData();
 
   const [filters, setFilters] = useState({
     startDate: format(startOfMonth(new Date()), "yyyy-MM-dd"),
     endDate: format(new Date(), "yyyy-MM-dd"),
     clientId: "",
-    departmentCode: "",
+    departmentCode: isManager ? user?.department_code || "" : "",
   });
 
   const { data: workLogs = [], isLoading } = useQuery({
-    queryKey: ["dashboardLogs", user?.email],
+    queryKey: ["dashboardLogs", user?.email, isAdmin, isManager],
     queryFn: () => {
-      // 管理者は全員分、非管理者は自分のみ
+      // 管理者は全員分、部長は自部署のみ、それ以外は自分のみ
       if (isAdmin) {
         return base44.entities.WorkLog.list("-work_date", 5000);
+      } else if (isManager) {
+        return base44.entities.WorkLog.filter({ department_code: user.department_code });
       } else {
         return base44.entities.WorkLog.filter({ user_email: user.email });
       }
@@ -45,8 +47,9 @@ export default function Dashboard() {
       // 顧客フィルタ
       if (filters.clientId && log.client_id !== filters.clientId) return false;
       
-      // 部署フィルタ：department_code で絞り込み（空文字なら全件）
-      if (filters.departmentCode && filters.departmentCode !== "") {
+      // 部署フィルタ：部長の場合は自部署のみ強制
+      const targetDeptCode = isManager ? user?.department_code : filters.departmentCode;
+      if (targetDeptCode && targetDeptCode !== "") {
         // まず department_code を取得
         let logDeptCode = log.department_code;
         
@@ -69,14 +72,14 @@ export default function Dashboard() {
         }
         
         // department_code が一致しない場合は除外
-        if (logDeptCode !== filters.departmentCode) {
+        if (logDeptCode !== targetDeptCode) {
           return false;
         }
       }
       
       return true;
     });
-  }, [workLogs, filters, departments]);
+  }, [workLogs, filters, departments, isManager, user?.department_code]);
 
   // 案件ごとの集計（最新の案件名を projects から取得してリネーム反映）
   const projectStats = useMemo(() => {
@@ -119,13 +122,13 @@ export default function Dashboard() {
 
   if (!user) return null;
 
-  // 非管理者は自分の日報へリダイレクト
-  if (!isAdmin) {
+  // 非管理者・非部長は自分の日報へリダイレクト
+  if (!isAdmin && !isManager) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
         <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
           <h2 className="text-xl font-bold text-slate-900 mb-2">アクセス権限がありません</h2>
-          <p className="text-sm text-slate-500 mb-4">このページは管理者のみ閲覧できます</p>
+          <p className="text-sm text-slate-500 mb-4">このページは管理者・部長のみ閲覧できます</p>
           <button
             onClick={() => window.location.href = createPageUrl("MyLogs")}
             className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800"
@@ -141,7 +144,9 @@ export default function Dashboard() {
     <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">工数集計</h1>
-        <p className="text-sm text-slate-500 mt-1">全員の工数集計</p>
+        <p className="text-sm text-slate-500 mt-1">
+          {isManager ? "自部署の工数集計" : "全員の工数集計"}
+        </p>
       </div>
 
       {/* Filters */}
@@ -151,6 +156,8 @@ export default function Dashboard() {
           onChange={setFilters}
           clients={clients}
           departments={departments}
+          isManager={isManager}
+          userDepartment={user?.department_code}
         />
       </div>
 
