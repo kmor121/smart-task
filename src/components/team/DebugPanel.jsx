@@ -109,35 +109,49 @@ export default function DebugPanel({ user, isAdmin, isManager, teamData }) {
               <h4 className="font-semibold text-amber-900 mb-2">👥 ユーザー取得結果</h4>
               <div className="space-y-1">
                 <div>
-                  <span className="text-slate-500">全ユーザー数:</span>{" "}
-                  <span className="font-mono">{meta.result_summary?.all_users_count || 0}</span>
+                  <span className="text-slate-500">全ユーザー数（users_total_found）:</span>{" "}
+                  <span className="font-mono font-bold">{meta.result_summary?.users_total_found || 0}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500">department_codeで絞込:</span>{" "}
-                  <span className="font-mono font-semibold text-blue-600">
-                    {meta.result_summary?.users_by_department_code ?? "N/A"}名
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500">departmentで絞込(fallback):</span>{" "}
-                  <span className="font-mono">{meta.result_summary?.users_by_department ?? "N/A"}名</span>
-                </div>
-                <div className="pt-2 border-t border-amber-100">
-                  <span className="text-slate-500">最終対象ユーザー:</span>{" "}
+                  <span className="text-slate-500">対象部署のユーザー（users_in_dept_found）:</span>{" "}
                   <span className="font-mono font-bold text-lg text-emerald-600">
-                    {meta.result_summary?.target_users_count || 0}名
+                    {meta.result_summary?.users_in_dept_found || 0}名
                   </span>
                 </div>
-                {meta.result_summary?.target_users_count === 0 && (
+                {meta.result_summary?.users_fetch_error && (
                   <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-[10px]">
-                    ❌ 対象ユーザーが0件です。以下を確認してください：
-                    <ul className="mt-1 ml-4 list-disc">
-                      <li>Userエンティティにdepartment_codeフィールドがあるか</li>
-                      <li>ユーザーのdepartment_code値が正しく設定されているか</li>
-                      <li>検索対象部署コード「{meta.query_info?.target_department}」が正しいか</li>
-                    </ul>
+                    ❌ ユーザー取得エラー：<br/>
+                    <code className="text-red-600">{meta.result_summary.users_fetch_error}</code>
                   </div>
                 )}
+                {meta.result_summary?.users_total_found === 0 && (
+                  <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-[10px]">
+                    ⚠️ Users エンティティにユーザーが登録されていません
+                  </div>
+                )}
+                {meta.result_summary?.users_in_dept_found === 0 && meta.result_summary?.users_total_found > 0 && (
+                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-amber-700 text-[10px]">
+                    ⚠️ 該当部署（{meta.query_info?.target_department}）にユーザーが登録されていません
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Sample Users */}
+          {meta?.result_summary?.sample_users?.length > 0 && (
+            <div className="bg-white rounded-md p-3 border border-amber-100">
+              <h4 className="font-semibold text-amber-900 mb-2">📋 サンプルユーザー（上位3件）</h4>
+              <div className="space-y-1 text-[10px]">
+                {meta.result_summary.sample_users.map((u, idx) => (
+                  <div key={idx} className="py-1 border-b border-amber-50 last:border-0">
+                    <div className="font-mono text-slate-700">
+                      <div>email: {u.email}</div>
+                      <div>department_code: <span className="font-semibold text-blue-600">{u.department_code}</span></div>
+                      <div>role: {u.role || "N/A"} | app_role: {u.app_role || "N/A"}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

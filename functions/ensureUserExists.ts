@@ -36,13 +36,13 @@ Deno.serve(async (req) => {
       const newUser = await base44.asServiceRole.entities.User.create({
         email: user_email,
         full_name: displayName,
-        department_code: department_code,
+        department_code: department_code || "",
         role: 'user',
         app_role: '一般'
       });
       
       user = newUser;
-      console.log(`✅ Created new user ${user_email} in department ${department_code}`);
+      console.log(`✅ Created new user ${user_email} in department ${department_code || "未設定"}`);
     }
 
     return Response.json({
