@@ -9,9 +9,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    // 権限チェック
+    // 権限チェック（Frontend と完全一致）
     const isAdmin = user.role === 'admin' || user.isAdmin === true || user.isOwner === true;
-    const isManager = user.role === 'manager' || user.app_role === '部長';
+    const isManager = user.role === 'manager' || user.app_role === '部長' || user.app_role === '副管理者';
 
     if (!isAdmin && !isManager) {
       return Response.json({ error: '部長または管理者のみアクセス可能です' }, { status: 403 });
@@ -35,13 +35,18 @@ Deno.serve(async (req) => {
       targetDepartment = user.department_code;
     }
 
-    console.log('🔍 Query parameters:', {
-      current_user_email: user.email,
-      current_user_department: user.department_code,
-      requested_department: department_code,
-      target_department: targetDepartment,
+    console.log('🔍 User & Role Info:', {
+      email: user.email,
+      role: user.role,
+      app_role: user.app_role,
       is_admin: isAdmin,
-      is_manager: isManager
+      is_manager: isManager,
+      department_code: user.department_code
+    });
+    
+    console.log('🔍 Query parameters:', {
+      requested_department: department_code,
+      target_department: targetDepartment
     });
 
     // 対象部署のユーザーを取得（Users エンティティから必ず取得）
