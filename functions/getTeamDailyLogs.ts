@@ -57,29 +57,47 @@ Deno.serve(async (req) => {
     const userDailyLogs = [];
 
     for (const targetUser of targetUsers) {
-      // DailyLogページと完全に同じ検索条件: work_date + user_email
-      // ※ user_emailが入っていない古いデータはcreated_byでフォールバック
-      let logs = await base44.asServiceRole.entities.WorkLog.filter({
+      console.log(`\n👤 Processing user: ${targetUser.email} (${targetUser.display_name})`);
+      
+      // DailyLogページと完全に同じ検索条件 (line 62): work_date + user_email
+      const logsByUserEmail = await base44.asServiceRole.entities.WorkLog.filter({
         user_email: targetUser.email,
         work_date: date
       });
       
-      let usedField = 'user_email';
+      console.log(`  📧 Logs by user_email: ${logsByUserEmail.length}`);
       
-      // user_emailで見つからない場合のみcreated_byでフォールバック
-      if (logs.length === 0) {
-        logs = await base44.asServiceRole.entities.WorkLog.filter({
-          created_by: targetUser.email,
-          work_date: date
-        });
-        if (logs.length > 0) {
-          usedField = 'created_by (fallback)';
-        }
+      // フォールバック: user_emailが空の古いデータ用にcreated_byで検索
+      const logsByCreatedBy = await base44.asServiceRole.entities.WorkLog.filter({
+        created_by: targetUser.email,
+        work_date: date
+      });
+      
+      console.log(`  👨‍💼 Logs by created_by (fallback): ${logsByCreatedBy.length}`);
+      
+      // 優先度: user_email > created_by
+      let logs = [];
+      let usedField = '';
+      let usedValue = '';
+      
+      if (logsByUserEmail.length > 0) {
+        logs = logsByUserEmail;
+        usedField = 'user_email';
+        usedValue = targetUser.email;
+        console.log(`  ✅ Using user_email match: ${logs.length} logs`);
+      } else if (logsByCreatedBy.length > 0) {
+        logs = logsByCreatedBy;
+        usedField = 'created_by (fallback)';
+        usedValue = targetUser.email;
+        console.log(`  ⚠️ Fallback to created_by: ${logs.length} logs`);
+      } else {
+        console.log(`  ❌ No logs found for this user`);
       }
-      
 
-      // DailyLogと完全に同じ提出判定ロジック
+      // DailyLogと完全に同じ提出判定ロジック (line 365)
       const isSubmitted = logs.some(l => l.status === '提出済' || l.status === '承認済');
+      
+      console.log(`  📊 Is submitted: ${isSubmitted}`);
       
       // 提出済みログから最新のsubmitted_atを取得
       let submittedAt = null;
@@ -96,14 +114,17 @@ Deno.serve(async (req) => {
       // 合計時間
       const totalMinutes = logs.reduce((sum, log) => sum + (log.duration_minutes || 0), 0);
 
-      // デバッグ情報（開発時のみ表示）
+      // デバッグ情報（member.emailとquery valueが一致していることを確認）
       const debugInfo = {
-        user_email: targetUser.email,
-        display_name: targetUser.display_name,
-        department: targetUser.department_code,
-        query_field: usedField,
-        query_value: targetUser.email,
-        logs_found: logs.length,
+        member_email: targetUser.email,
+        member_display_name: targetUser.display_name,
+        member_department: targetUser.department_code,
+        query_field_used: usedField,
+        query_value_used: usedValue,
+        match_confirmed: targetUser.email === usedValue,
+        logs_by_user_email: logsByUserEmail.length,
+        logs_by_created_by: logsByCreatedBy.length,
+        total_logs_used: logs.length,
         is_submitted: isSubmitted,
         total_minutes: totalMinutes
       };
