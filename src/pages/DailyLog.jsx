@@ -314,12 +314,19 @@ export default function DailyLog() {
     }
 
     try {
-      // 既存レコードを削除
-      for (const log of existingLogs) {
-        await base44.entities.WorkLog.delete(log.id);
-      }
+       // ユーザーが Users エンティティに存在することを確認（自動作成）
+       await base44.functions.invoke('ensureUserExists', {
+         user_email: user.email,
+         full_name: user.full_name,
+         department_code: user.department_code || ""
+       });
 
-      // 新規作成
+       // 既存レコードを削除
+       for (const log of existingLogs) {
+         await base44.entities.WorkLog.delete(log.id);
+       }
+
+       // 新規作成
       const records = rows.map(r => ({
         work_date: dateStr,
         user_email: user.email,
