@@ -194,6 +194,15 @@ function TeamDailyLogInner({ user, isAdmin, isManager }) {
             </Badge>
           </div>
         </div>
+        
+        {/* メタ情報（デバッグ用） */}
+        {teamData?._meta && (
+          <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
+            <p>🔍 部署: {DEPT_LABELS[teamData._meta.actual_department] || teamData._meta.actual_department || '全社'} / 
+            取得ユーザー数: {teamData._meta.total_users_found}名 / 
+            権限: {teamData._meta.is_admin ? '管理者' : teamData._meta.is_manager ? '部長' : '一般'}</p>
+          </div>
+        )}
       </div>
 
       {/* Loading */}
@@ -287,16 +296,17 @@ function TeamDailyLogInner({ user, isAdmin, isManager }) {
                   ) : (
                     <div className="text-center py-6">
                       <p className="text-slate-500">未提出です</p>
-                      {/* デバッグ情報 */}
-                      {userData._debug && (
-                        <details className="mt-2 text-xs text-slate-400">
-                          <summary className="cursor-pointer">デバッグ情報</summary>
-                          <pre className="mt-1 text-left bg-slate-800 text-slate-200 p-2 rounded overflow-auto">
-                            {JSON.stringify(userData._debug, null, 2)}
-                          </pre>
-                        </details>
-                      )}
                     </div>
+                  )}
+                  
+                  {/* デバッグ情報（提出済・未提出共通） */}
+                  {userData._debug && (
+                    <details className="mt-3 text-xs text-slate-400">
+                      <summary className="cursor-pointer">🔍 デバッグ情報</summary>
+                      <pre className="mt-1 text-left bg-slate-800 text-slate-200 p-2 rounded overflow-auto text-[10px]">
+                        {JSON.stringify(userData._debug, null, 2)}
+                      </pre>
+                    </details>
                   )}
                 </AccordionContent>
               </AccordionItem>
