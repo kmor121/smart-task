@@ -92,7 +92,9 @@ export default function Dashboard() {
         
         map[pid] = {
           project_id: pid,
-          project_name: projectData?.name || log.project_name || "不明",
+          project_name: projectData?.project_date && projectData?.project_title 
+            ? `${projectData.project_date}　${projectData.project_title}` 
+            : (projectData?.name || log.project_name || "不明"),
           client_name: projectData?.client_name || log.client_name || "",
           is_temporary: log.is_temporary_project || false,
           total_minutes: 0,
