@@ -38,7 +38,7 @@ export default function DailyLog() {
   const navigate = useNavigate();
   
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
-  const [newProjectForm, setNewProjectForm] = useState({ client_name: "", name: "" });
+  const [newProjectForm, setNewProjectForm] = useState({ client_name: "", project_date: "", project_title: "" });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [editProjectDialogOpen, setEditProjectDialogOpen] = useState(false);
   const [editingProjectFromRow, setEditingProjectFromRow] = useState(null);
@@ -155,12 +155,16 @@ export default function DailyLog() {
     const presetClient = currentRow?.client_id ? 
       clients.find(c => c.id === currentRow.client_id)?.name || "" : "";
     
-    setNewProjectForm({ client_name: presetClient, name: "" });
+    setNewProjectForm({ client_name: presetClient, project_date: dateStr, project_title: "" });
     setNewProjectDialogOpen(true);
   };
 
   const saveNewProject = async () => {
-    if (!newProjectForm.client_name || !newProjectForm.name) {
+    if (!newProjectForm.project_date) {
+      toast.error("日付を選択してください");
+      return;
+    }
+    if (!newProjectForm.client_name || !newProjectForm.project_title) {
       toast.error("顧客名と案件名は必須です");
       return;
     }
@@ -187,7 +191,8 @@ export default function DailyLog() {
 
       // 案件を作成
       const response = await base44.functions.invoke('createProject', {
-        name: newProjectForm.name.trim(),
+        project_date: newProjectForm.project_date,
+        project_title: newProjectForm.project_title.trim(),
         client_id: clientId,
         status: "仮案件"
       });
@@ -214,7 +219,7 @@ export default function DailyLog() {
 
         toast.success(`案件「${newProject.name}」を作成しました`);
         setNewProjectDialogOpen(false);
-        setNewProjectForm({ client_name: "", name: "" });
+        setNewProjectForm({ client_name: "", project_date: "", project_title: "" });
         setSelectedRowForNewProject(null);
       } else {
         const errorMsg = response.data?.error || "案件の作成に失敗しました";
@@ -509,6 +514,30 @@ export default function DailyLog() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">
+                日付 <span className="text-red-500">*</span>
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {newProjectForm.project_date ? format(new Date(newProjectForm.project_date), "yyyy年M月d日(E)", { locale: ja }) : "日付を選択"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={newProjectForm.project_date ? new Date(newProjectForm.project_date) : undefined}
+                    onSelect={(date) => setNewProjectForm({ ...newProjectForm, project_date: date ? format(date, "yyyy-MM-dd") : "" })}
+                    locale={ja}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">
                 顧客名 <span className="text-red-500">*</span>
               </label>
               <Input
@@ -522,18 +551,24 @@ export default function DailyLog() {
                 案件名 <span className="text-red-500">*</span>
               </label>
               <Input
-                value={newProjectForm.name}
-                onChange={(e) => setNewProjectForm({ ...newProjectForm, name: e.target.value })}
+                value={newProjectForm.project_title}
+                onChange={(e) => setNewProjectForm({ ...newProjectForm, project_title: e.target.value })}
                 placeholder="案件名を入力"
               />
             </div>
+            {newProjectForm.project_date && newProjectForm.project_title && (
+              <div className="bg-slate-50 rounded-lg p-3">
+                <p className="text-xs text-slate-500 mb-1">表示名プレビュー</p>
+                <p className="text-sm font-medium text-slate-800">{newProjectForm.project_date}　{newProjectForm.project_title}</p>
+              </div>
+            )}
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
                   setNewProjectDialogOpen(false);
-                  setNewProjectForm({ client_name: "", name: "" });
+                  setNewProjectForm({ client_name: "", project_date: "", project_title: "" });
                   setSelectedRowForNewProject(null);
                 }}
                 disabled={saving}

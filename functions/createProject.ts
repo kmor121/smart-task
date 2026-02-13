@@ -15,10 +15,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: '営業部のみ案件を作成できます' }, { status: 403 });
     }
 
-    const { name, client_id, status } = await req.json();
+    const { project_date, project_title, client_id, status } = await req.json();
 
-    if (!name || !client_id) {
-      return Response.json({ error: '案件名と顧客IDは必須です' }, { status: 400 });
+    if (!project_date || !project_title || !client_id) {
+      return Response.json({ error: '日付、案件名、顧客IDは必須です' }, { status: 400 });
     }
 
     // 顧客情報を取得
@@ -27,7 +27,12 @@ Deno.serve(async (req) => {
       return Response.json({ error: '顧客が見つかりません' }, { status: 404 });
     }
 
+    // 表示用nameを生成（YYYY-MM-DD　タイトル）
+    const name = `${project_date}　${project_title}`;
+
     const projectData = {
+      project_date,
+      project_title,
       name,
       client_id,
       client_name: client.name,

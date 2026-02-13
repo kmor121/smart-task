@@ -18,19 +18,23 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden: 営業または管理者のみ案件を編集できます' }, { status: 403 });
     }
 
-    const { projectId, name } = await req.json();
+    const { projectId, project_date, project_title } = await req.json();
 
     // バリデーション
     if (!projectId) {
       return Response.json({ error: '案件IDが必要です' }, { status: 400 });
     }
 
-    const trimmedName = (name || "").trim();
-    if (!trimmedName) {
+    if (!project_date) {
+      return Response.json({ error: '日付を選択してください' }, { status: 400 });
+    }
+
+    const trimmedTitle = (project_title || "").trim();
+    if (!trimmedTitle) {
       return Response.json({ error: '案件名を入力してください' }, { status: 400 });
     }
 
-    if (trimmedName.length > 200) {
+    if (trimmedTitle.length > 200) {
       return Response.json({ error: '案件名は200文字以内で入力してください' }, { status: 400 });
     }
 
@@ -40,9 +44,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: '案件が見つかりません' }, { status: 404 });
     }
 
-    // 案件名を更新
+    // 表示用nameを生成
+    const name = `${project_date}　${trimmedTitle}`;
+
+    // 案件を更新
     await base44.asServiceRole.entities.Project.update(projectId, {
-      name: trimmedName
+      project_date,
+      project_title: trimmedTitle,
+      name
     });
 
     return Response.json({ 
