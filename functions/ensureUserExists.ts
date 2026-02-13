@@ -15,43 +15,73 @@ Deno.serve(async (req) => {
     });
 
     let user;
+    const displayName = full_name || user_email.split('@')[0];
+    
     if (existing.length > 0) {
-      // User exists - update if necessary
+      // User exists - update necessary fields
       user = existing[0];
-      console.log(`✅ User ${user_email} already exists`);
+      console.log(`ℹ️ User ${user_email} already exists (id: ${user.id})`);
       
-      // Update if department or name is different
-      if (user.department_code !== department_code || (full_name && user.full_name !== full_name)) {
-        const updateData = {};
-        if (user.department_code !== department_code) updateData.department_code = department_code;
-        if (full_name && user.full_name !== full_name) updateData.full_name = full_name;
-        
+      // Always ensure department_code is set
+      const updateData = {};
+      if (!user.department_code || user.department_code !== department_code) {
+        updateData.department_code = department_code;
+      }
+      if (full_name && user.full_name !== full_name) {
+        updateData.full_name = full_name;
+      }
+      
+      if (Object.keys(updateData).length > 0) {
         await base44.asServiceRole.entities.User.update(user.id, updateData);
         console.log(`📝 Updated user ${user_email}:`, updateData);
+        user = { ...user, ...updateData };
       }
     } else {
       // User doesn't exist - create
-      const displayName = full_name || user_email.split('@')[0];
-      
       const newUser = await base44.asServiceRole.entities.User.create({
         email: user_email,
         full_name: displayName,
-        department_code: department_code || "",
+        department_code: department_code,
         role: 'user',
         app_role: '一般'
       });
       
       user = newUser;
-      console.log(`✅ Created new user ${user_email} in department ${department_code || "未設定"}`);
+      console.log(`✅ Created new user ${user_email} in department ${department_code}`);
     }
+
+    // 📋 Verify user was saved correctly
+    console.log(`\n🔍 Verifying user in database...`);
+    const verification = await base44.asServiceRole.entities.User.filter({
+      email: user_email
+    });
+    
+    if (verification.length === 0) {
+      console.error(`❌ CRITICAL: User ${user_email} not found after create/update!`);
+      return Response.json({
+        error: `User ${user_email} could not be persisted to database`,
+        debug: { user_email, department_code }
+      }, { status: 500 });
+    }
+    
+    const verifiedUser = verification[0];
+    console.log(`✅ User verified in database:`);
+    console.log(`   id: ${verifiedUser.id}`);
+    console.log(`   email: ${verifiedUser.email}`);
+    console.log(`   full_name: ${verifiedUser.full_name}`);
+    console.log(`   department_code: ${verifiedUser.department_code}`);
+    console.log(`   role: ${verifiedUser.role}`);
+    console.log(`   app_role: ${verifiedUser.app_role}`);
 
     return Response.json({
       success: true,
       user: {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        department_code: user.department_code
+        id: verifiedUser.id,
+        email: verifiedUser.email,
+        full_name: verifiedUser.full_name,
+        department_code: verifiedUser.department_code,
+        role: verifiedUser.role,
+        app_role: verifiedUser.app_role
       }
     });
   } catch (error) {
