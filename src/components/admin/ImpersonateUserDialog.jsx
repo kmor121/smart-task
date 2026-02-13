@@ -40,6 +40,8 @@ export default function ImpersonateUserDialog({ open, onOpenChange }) {
   const { user: currentUser } = useCurrentUser();
 
   const handleSelectUser = (testUser) => {
+    // sessionStorage に impersonate_user_email を保存
+    sessionStorage.setItem("impersonate_user_email", testUser.email);
     localStorage.setItem("impersonateUser", JSON.stringify(testUser));
     window.location.reload();
   };
