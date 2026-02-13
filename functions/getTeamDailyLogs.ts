@@ -29,32 +29,36 @@ Deno.serve(async (req) => {
       targetDepartment = user.department_code;
     }
 
-    // 対象部署のユーザーを取得
+    // 対象部署のユーザーを取得（表示名を正規化）
     const allUsers = await base44.asServiceRole.entities.User.list();
     const targetUsers = allUsers.filter(u => {
       if (!targetDepartment) return true; // adminで全社表示
       return u.department_code === targetDepartment;
-    });
+    }).map(u => ({
+      ...u,
+      // 表示名の正規化: full_name または email の @ より前を使用
+      display_name: u.full_name || u.email?.split('@')[0] || u.email || 'Unknown'
+    }));
 
     // 各ユーザーの日報を取得
     const userDailyLogs = [];
 
     for (const targetUser of targetUsers) {
-      // 日付範囲検索: その日の00:00:00 〜 翌日の00:00:00未満
-      // work_dateは文字列"YYYY-MM-DD"なので等価比較で取得
+      // 日付範囲検索: 日付文字列の等価比較
       const logs = await base44.asServiceRole.entities.WorkLog.filter({
         user_email: targetUser.email,
         work_date: date
       });
 
-      // DailyLogと同じ提出判定ロジック: statusが"提出済"または"承認済"
-      const submittedLogs = logs.filter(log => log.status === '提出済' || log.status === '承認済');
-      const isSubmitted = submittedLogs.length > 0;
+      // DailyLogと同じ提出判定ロジック: statusが"提出済"または"承認済" または submitted_atが存在
+      const hasSubmittedAt = logs.some(log => log.submitted_at);
+      const hasSubmittedStatus = logs.some(log => log.status === '提出済' || log.status === '承認済');
+      const isSubmitted = hasSubmittedAt || hasSubmittedStatus;
       
-      // 提出済みログがある場合、最新のsubmitted_atを取得
+      // 提出済みログから最新のsubmitted_atを取得
       let submittedAt = null;
-      if (submittedLogs.length > 0) {
-        const withSubmittedAt = submittedLogs.filter(l => l.submitted_at);
+      if (isSubmitted) {
+        const withSubmittedAt = logs.filter(l => l.submitted_at);
         if (withSubmittedAt.length > 0) {
           submittedAt = withSubmittedAt.sort((a, b) => 
             new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
@@ -65,18 +69,26 @@ Deno.serve(async (req) => {
       // 合計時間
       const totalMinutes = logs.reduce((sum, log) => sum + (log.duration_minutes || 0), 0);
 
-      // デバッグ情報
+      // デバッグ情報（一時的）
       const debugInfo = {
+        user_full_name: targetUser.full_name,
+        user_display_name: targetUser.display_name,
         total_logs: logs.length,
-        submitted_logs: submittedLogs.length,
-        log_ids: logs.map(l => l.id),
-        log_statuses: logs.map(l => ({ id: l.id, status: l.status, submitted_at: l.submitted_at }))
+        has_submitted_at: hasSubmittedAt,
+        has_submitted_status: hasSubmittedStatus,
+        is_submitted: isSubmitted,
+        log_details: logs.map(l => ({ 
+          id: l.id, 
+          status: l.status, 
+          submitted_at: l.submitted_at,
+          has_submitted_at: !!l.submitted_at
+        }))
       };
 
       userDailyLogs.push({
         user_id: targetUser.id,
         user_email: targetUser.email,
-        user_name: targetUser.full_name,
+        user_name: targetUser.display_name, // 正規化された表示名を使用
         department_code: targetUser.department_code,
         is_submitted: isSubmitted,
         submitted_at: submittedAt,
@@ -88,9 +100,9 @@ Deno.serve(async (req) => {
           is_revision: log.is_revision || false,
           duration_minutes: log.duration_minutes || 0,
           description: log.description || '',
-          status: log.status // デバッグ用
+          status: log.status
         })),
-        _debug: debugInfo // デバッグ情報
+        _debug: debugInfo
       });
     }
 
@@ -98,7 +110,14 @@ Deno.serve(async (req) => {
       success: true, 
       date,
       department_code: targetDepartment,
-      users: userDailyLogs 
+      users: userDailyLogs,
+      _meta: {
+        total_users_found: targetUsers.length,
+        requested_department: department_code,
+        actual_department: targetDepartment,
+        is_admin: isAdmin,
+        is_manager: isManager
+      }
     });
 
   } catch (error) {
