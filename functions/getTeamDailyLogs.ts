@@ -45,25 +45,39 @@ Deno.serve(async (req) => {
     });
 
     // 対象部署のユーザーを取得（Users エンティティから必ず取得）
-    const allUsers = await base44.asServiceRole.entities.User.list();
-    console.log('📋 All users count:', allUsers.length);
+    let allUsers = [];
+    let usersFetchError = null;
+    let targetUsers = [];
     
-    // デバッグ: サンプルユーザーのフィールド確認
-    if (allUsers.length > 0) {
-      console.log('🔍 Sample user fields:', Object.keys(allUsers[0]));
+    try {
+      // service role で全ユーザーを取得（RLS無視）
+      allUsers = await base44.asServiceRole.entities.User.list();
+      console.log('📋 All users count:', allUsers.length);
+      
+      // サンプルユーザー情報
+      const sampleUsers = allUsers.slice(0, 3).map(u => ({
+        email: u.email,
+        department_code: u.department_code,
+        role: u.role,
+        app_role: u.app_role
+      }));
+      console.log('🔍 Sample users:', sampleUsers);
+      
+      // department_code で絞り込み（Users エンティティで確実に取得）
+      targetUsers = allUsers.filter(u => {
+        if (!targetDepartment) return true; // adminで全社表示
+        return u.department_code === targetDepartment;
+      }).map(u => ({
+        ...u,
+        // 表示名の正規化: full_name または email の @ より前を使用
+        display_name: u.full_name || u.email?.split('@')[0] || u.email || 'Unknown'
+      }));
+      
+      console.log('👥 Target users from Users entity:', targetUsers.length, 'for department:', targetDepartment);
+    } catch (err) {
+      usersFetchError = err.message || String(err);
+      console.error('❌ Users fetch error:', usersFetchError);
     }
-    
-    // department_code で絞り込み（Users エンティティで確実に取得）
-    let targetUsers = allUsers.filter(u => {
-      if (!targetDepartment) return true; // adminで全社表示
-      return u.department_code === targetDepartment;
-    }).map(u => ({
-      ...u,
-      // 表示名の正規化: full_name または email の @ より前を使用
-      display_name: u.full_name || u.email?.split('@')[0] || u.email || 'Unknown'
-    }));
-    
-    console.log('👥 Target users from Users entity:', targetUsers.length, 'for department:', targetDepartment);
 
     // 各ユーザーの日報を取得
     const userDailyLogs = [];
@@ -185,12 +199,18 @@ Deno.serve(async (req) => {
           date_value: date
         },
         result_summary: {
-          all_users_count: allUsers.length,
-          target_users_count: targetUsers.length,
+          users_total_found: allUsers.length,
+          users_in_dept_found: targetUsers.length,
           users_returned: userDailyLogs.length,
           users_submitted: userDailyLogs.filter(u => u.is_submitted).length,
           users_unsubmitted: userDailyLogs.filter(u => !u.is_submitted).length,
-          sample_user_fields: allUsers.length > 0 ? Object.keys(allUsers[0]) : [],
+          sample_users: allUsers.slice(0, 3).map(u => ({
+            email: u.email,
+            department_code: u.department_code,
+            role: u.role,
+            app_role: u.app_role
+          })),
+          users_fetch_error: usersFetchError,
           warning: targetUsers.length === 0 ? '⚠️ Users エンティティに該当部署の部下が登録されていません' : null
         }
       }
