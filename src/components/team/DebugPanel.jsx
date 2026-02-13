@@ -1,0 +1,174 @@
+import React, { useState } from "react";
+import { ChevronDown, ChevronUp, Bug } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
+export default function DebugPanel({ user, isAdmin, isManager, teamData }) {
+  const [expanded, setExpanded] = useState(true);
+
+  const meta = teamData?._meta;
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-lg mb-6 overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-amber-100 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Bug className="w-4 h-4 text-amber-700" />
+          <span className="text-sm font-medium text-amber-900">🔍 デバッグ情報</span>
+          {!expanded && meta && (
+            <Badge variant="outline" className="ml-2 text-xs">
+              対象: {meta.result_summary?.target_users_count || 0}名
+            </Badge>
+          )}
+        </div>
+        {expanded ? (
+          <ChevronUp className="w-4 h-4 text-amber-700" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-amber-700" />
+        )}
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4 space-y-3 text-xs text-slate-700">
+          {/* Current User */}
+          <div className="bg-white rounded-md p-3 border border-amber-100">
+            <h4 className="font-semibold text-amber-900 mb-2">📌 現在のユーザー</h4>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <span className="text-slate-500">ID:</span> {user?.id || "N/A"}
+              </div>
+              <div>
+                <span className="text-slate-500">Email:</span> {user?.email || "N/A"}
+              </div>
+              <div>
+                <span className="text-slate-500">Role:</span> {user?.role || "N/A"}
+              </div>
+              <div>
+                <span className="text-slate-500">App Role:</span> {user?.app_role || "N/A"}
+              </div>
+              <div>
+                <span className="text-slate-500">Department:</span> {user?.department_code || user?.department || "N/A"}
+              </div>
+            </div>
+          </div>
+
+          {/* Permission Detection */}
+          <div className="bg-white rounded-md p-3 border border-amber-100">
+            <h4 className="font-semibold text-amber-900 mb-2">🔐 権限判定</h4>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Badge variant={isAdmin ? "default" : "outline"}>Admin: {isAdmin ? "✅" : "❌"}</Badge>
+                <span className="text-slate-500 text-[10px]">
+                  (role=admin OR isAdmin=true OR isOwner=true)
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={isManager ? "default" : "outline"}>Manager: {isManager ? "✅" : "❌"}</Badge>
+                <span className="text-slate-500 text-[10px]">
+                  (role=manager OR app_role=部長)
+                </span>
+              </div>
+              {meta?.current_user && (
+                <div className="mt-2 text-[10px] text-slate-500">
+                  Backend判定: isAdmin={meta.query_info?.is_admin ? "✅" : "❌"}, 
+                  isManager={meta.query_info?.is_manager ? "✅" : "❌"}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Department Filter */}
+          {meta && (
+            <div className="bg-white rounded-md p-3 border border-amber-100">
+              <h4 className="font-semibold text-amber-900 mb-2">🎯 部署フィルタ</h4>
+              <div className="space-y-1">
+                <div>
+                  <span className="text-slate-500">リクエスト部署:</span>{" "}
+                  <span className="font-mono">{meta.query_info?.requested_department || "null (全社)"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">実際の検索部署:</span>{" "}
+                  <span className="font-mono font-semibold text-blue-600">
+                    {meta.query_info?.target_department || "null (全社)"}
+                  </span>
+                </div>
+                {isManager && !isAdmin && (
+                  <div className="text-amber-700 text-[10px] mt-1">
+                    ⚠️ 部長は自部署固定（{user?.department_code}）
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Users Query Result */}
+          {meta && (
+            <div className="bg-white rounded-md p-3 border border-amber-100">
+              <h4 className="font-semibold text-amber-900 mb-2">👥 ユーザー取得結果</h4>
+              <div className="space-y-1">
+                <div>
+                  <span className="text-slate-500">全ユーザー数:</span>{" "}
+                  <span className="font-mono">{meta.result_summary?.all_users_count || 0}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">department_codeで絞込:</span>{" "}
+                  <span className="font-mono font-semibold text-blue-600">
+                    {meta.result_summary?.users_by_department_code ?? "N/A"}名
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500">departmentで絞込(fallback):</span>{" "}
+                  <span className="font-mono">{meta.result_summary?.users_by_department ?? "N/A"}名</span>
+                </div>
+                <div className="pt-2 border-t border-amber-100">
+                  <span className="text-slate-500">最終対象ユーザー:</span>{" "}
+                  <span className="font-mono font-bold text-lg text-emerald-600">
+                    {meta.result_summary?.target_users_count || 0}名
+                  </span>
+                </div>
+                {meta.result_summary?.target_users_count === 0 && (
+                  <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-[10px]">
+                    ❌ 対象ユーザーが0件です。以下を確認してください：
+                    <ul className="mt-1 ml-4 list-disc">
+                      <li>Userエンティティにdepartment_codeフィールドがあるか</li>
+                      <li>ユーザーのdepartment_code値が正しく設定されているか</li>
+                      <li>検索対象部署コード「{meta.query_info?.target_department}」が正しいか</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Sample User Fields */}
+          {meta?.result_summary?.sample_user_fields?.length > 0 && (
+            <div className="bg-white rounded-md p-3 border border-amber-100">
+              <h4 className="font-semibold text-amber-900 mb-2">🔬 ユーザーフィールド一覧（サンプル）</h4>
+              <div className="font-mono text-[10px] text-slate-600 space-x-1">
+                {meta.result_summary.sample_user_fields.map((field, idx) => (
+                  <span key={idx} className="inline-block bg-slate-100 px-1.5 py-0.5 rounded">
+                    {field}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Response Metadata */}
+          {meta && (
+            <details className="bg-white rounded-md p-3 border border-amber-100">
+              <summary className="font-semibold text-amber-900 cursor-pointer">
+                📦 Full Metadata (JSON)
+              </summary>
+              <pre className="mt-2 p-2 bg-slate-900 text-slate-100 rounded text-[9px] overflow-auto max-h-64">
+                {JSON.stringify(meta, null, 2)}
+              </pre>
+            </details>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

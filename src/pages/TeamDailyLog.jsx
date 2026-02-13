@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { CalendarIcon, Users, ChevronDown, ChevronUp, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import useCurrentUser from "../components/hooks/useCurrentUser";
+import DebugPanel from "../components/team/DebugPanel";
 
 const DEPT_LABELS = {
   sales: "営業",
@@ -200,15 +201,15 @@ function TeamDailyLogInner({ user, isAdmin, isManager }) {
           </div>
         </div>
         
-        {/* メタ情報（デバッグ用） */}
-        {teamData?._meta && (
-          <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
-            <p>🔍 部署: {DEPT_LABELS[teamData._meta.actual_department] || teamData._meta.actual_department || '全社'} / 
-            取得ユーザー数: {teamData._meta.total_users_found}名 / 
-            権限: {teamData._meta.is_admin ? '管理者' : teamData._meta.is_manager ? '部長' : '一般'}</p>
-          </div>
-        )}
       </div>
+
+      {/* デバッグパネル（常時表示） */}
+      <DebugPanel 
+        user={user} 
+        isAdmin={isAdmin} 
+        isManager={isManager} 
+        teamData={teamData} 
+      />
 
       {/* Loading */}
       {isLoading ? (

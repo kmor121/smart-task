@@ -48,16 +48,37 @@ Deno.serve(async (req) => {
     const allUsers = await base44.asServiceRole.entities.User.list();
     console.log('📋 All users count:', allUsers.length);
     
-    const targetUsers = allUsers.filter(u => {
+    // デバッグ: サンプルユーザーのフィールド確認
+    if (allUsers.length > 0) {
+      console.log('🔍 Sample user fields:', Object.keys(allUsers[0]));
+      console.log('🔍 Sample user:', allUsers[0]);
+    }
+    
+    // department_code で絞り込み
+    const targetUsersByDeptCode = allUsers.filter(u => {
       if (!targetDepartment) return true; // adminで全社表示
       return u.department_code === targetDepartment;
-    }).map(u => ({
+    });
+    
+    // フォールバック: department フィールドでも検索
+    const targetUsersByDept = allUsers.filter(u => {
+      if (!targetDepartment) return true;
+      return u.department === targetDepartment;
+    });
+    
+    console.log('👥 Users by department_code:', targetUsersByDeptCode.length);
+    console.log('👥 Users by department (fallback):', targetUsersByDept.length);
+    
+    // 優先度: department_code > department
+    let targetUsers = targetUsersByDeptCode.length > 0 ? targetUsersByDeptCode : targetUsersByDept;
+    
+    targetUsers = targetUsers.map(u => ({
       ...u,
       // 表示名の正規化: full_name または email の @ より前を使用
       display_name: u.full_name || u.email?.split('@')[0] || u.email || 'Unknown'
     }));
     
-    console.log('👥 Target users:', targetUsers.length, 'users found for department:', targetDepartment);
+    console.log('✅ Final target users:', targetUsers.length, 'for department:', targetDepartment);
 
     // 各ユーザーの日報を取得
     const userDailyLogs = [];
@@ -181,9 +202,12 @@ Deno.serve(async (req) => {
         result_summary: {
           all_users_count: allUsers.length,
           target_users_count: targetUsers.length,
+          users_by_department_code: targetUsersByDeptCode.length,
+          users_by_department: targetUsersByDept.length,
           users_returned: userDailyLogs.length,
           users_submitted: userDailyLogs.filter(u => u.is_submitted).length,
-          users_unsubmitted: userDailyLogs.filter(u => !u.is_submitted).length
+          users_unsubmitted: userDailyLogs.filter(u => !u.is_submitted).length,
+          sample_user_fields: allUsers.length > 0 ? Object.keys(allUsers[0]) : []
         }
       }
     };
