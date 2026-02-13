@@ -72,8 +72,13 @@ export default function DebugPanel({ user, isAdmin, isManager, teamData }) {
               </div>
               {meta?.current_user && (
                 <div className="mt-2 text-[10px] text-slate-500">
-                  Backend判定: isAdmin={meta.query_info?.is_admin ? "✅" : "❌"}, 
-                  isManager={meta.query_info?.is_manager ? "✅" : "❌"}
+                  Frontend判定: isAdmin={isAdmin ? "✅" : "❌"} / isManager={isManager ? "✅" : "❌"}<br/>
+                  Backend判定: isAdmin={meta.query_info?.is_admin ? "✅" : "❌"} / isManager={meta.query_info?.is_manager ? "✅" : "❌"}
+                  {meta.query_info?.is_manager !== isManager && (
+                    <div className="mt-1 p-1 bg-red-50 text-red-600 border border-red-200 rounded">
+                      ⚠️ Frontend と Backend の isManager が一致していません！ role が正しく設定されているか確認してください
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -84,6 +89,10 @@ export default function DebugPanel({ user, isAdmin, isManager, teamData }) {
             <div className="bg-white rounded-md p-3 border border-amber-100">
               <h4 className="font-semibold text-amber-900 mb-2">🎯 部署フィルタ</h4>
               <div className="space-y-1">
+                <div>
+                  <span className="text-slate-500">現在のユーザー部署:</span>{" "}
+                  <span className="font-mono font-semibold text-blue-600">{user?.department_code || "未設定"}</span>
+                </div>
                 <div>
                   <span className="text-slate-500">リクエスト部署:</span>{" "}
                   <span className="font-mono">{meta.query_info?.requested_department || "null (全社)"}</span>
@@ -96,7 +105,12 @@ export default function DebugPanel({ user, isAdmin, isManager, teamData }) {
                 </div>
                 {isManager && !isAdmin && (
                   <div className="text-amber-700 text-[10px] mt-1">
-                    ⚠️ 部長は自部署固定（{user?.department_code}）
+                    ✅ 部長は自部署固定（{user?.department_code}）
+                  </div>
+                )}
+                {!user?.department_code && (
+                  <div className="mt-2 p-1 bg-red-50 text-red-600 border border-red-200 rounded text-[10px]">
+                    ⚠️ 現在のユーザーの department_code が未設定です！
                   </div>
                 )}
               </div>
