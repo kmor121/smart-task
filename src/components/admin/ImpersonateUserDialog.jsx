@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { UserCircle, Users } from "lucide-react";
+import { UserCircle, Users, Check } from "lucide-react";
+import useCurrentUser from "../hooks/useCurrentUser";
 
 const TEST_USERS = [
   { id: "test_admin", email: "test_admin@example.com", full_name: "管理者テスト", department_code: "admin", app_role: "管理者", role: "admin", isAdmin: true },
@@ -36,6 +37,8 @@ const DEPT_LABELS = {
 };
 
 export default function ImpersonateUserDialog({ open, onOpenChange }) {
+  const { user: currentUser } = useCurrentUser();
+
   const handleSelectUser = (testUser) => {
     localStorage.setItem("impersonateUser", JSON.stringify(testUser));
     window.location.reload();
@@ -63,21 +66,35 @@ export default function ImpersonateUserDialog({ open, onOpenChange }) {
     return { admins, managers, allowedStaff };
   }, []);
 
-  const UserButton = ({ user }) => (
-    <button
-      onClick={() => handleSelectUser(user)}
-      className="w-full flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-left"
-    >
-      <UserCircle className="w-7 h-7 text-slate-400 flex-shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-slate-800 text-sm">{user.full_name}</p>
-        <p className="text-xs text-slate-500">{DEPT_LABELS[user.department_code] || user.department_code}</p>
-      </div>
-      {user.role !== "staff" && (
-        <Badge variant="outline" className="text-xs">{user.app_role}</Badge>
-      )}
-    </button>
-  );
+  const UserButton = ({ user }) => {
+    const isCurrent = currentUser?.id === user.id;
+    
+    return (
+      <button
+        onClick={() => handleSelectUser(user)}
+        aria-current={isCurrent ? "true" : undefined}
+        className={`
+          w-full flex items-center gap-2 p-2.5 rounded-lg border transition-colors text-left cursor-pointer
+          ${isCurrent 
+            ? "bg-slate-100 border-slate-300 border-l-4 border-l-slate-500" 
+            : "border-slate-200 hover:bg-slate-50 active:bg-slate-200"
+          }
+        `}
+      >
+        <UserCircle className="w-7 h-7 text-slate-400 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-slate-800 text-sm">{user.full_name}</p>
+          <p className="text-xs text-slate-500">{DEPT_LABELS[user.department_code] || user.department_code}</p>
+        </div>
+        {isCurrent && (
+          <Badge className="bg-slate-600 text-white text-xs px-2">現在</Badge>
+        )}
+        {!isCurrent && user.role !== "staff" && (
+          <Badge variant="outline" className="text-xs">{user.app_role}</Badge>
+        )}
+      </button>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -87,9 +104,18 @@ export default function ImpersonateUserDialog({ open, onOpenChange }) {
             <Users className="w-5 h-5" />
             テストユーザー切替
           </DialogTitle>
-          <p className="text-sm text-slate-500 pt-1">
-            ⚠️ Preview環境専用：日報入力や権限をテストできます
-          </p>
+          <div className="space-y-1 pt-1">
+            <p className="text-sm text-slate-500">
+              ⚠️ Preview環境専用：日報入力や権限をテストできます
+            </p>
+            {currentUser && (
+              <p className="text-xs text-slate-600 flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5" />
+                現在：<span className="font-medium">{currentUser.full_name}</span>
+                <span className="text-slate-400">（{DEPT_LABELS[currentUser.department_code] || currentUser.department_code}）</span>
+              </p>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="grid lg:grid-cols-2 gap-6 flex-1 overflow-hidden py-4">
