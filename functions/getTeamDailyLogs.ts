@@ -17,11 +17,35 @@ Deno.serve(async (req) => {
       return Response.json({ error: '部長または管理者のみアクセス可能です' }, { status: 403 });
     }
 
-    const { date, department_code } = await req.json();
+    const { date, department_code, impersonate_user_email } = await req.json();
 
     if (!date) {
       return Response.json({ error: '日付は必須です' }, { status: 400 });
     }
+
+    // Effective user determination
+    let effectiveUser = user;
+    if (impersonate_user_email) {
+      // Impersonation: admin only, and only in preview/dev
+      if (!isAdmin) {
+        return Response.json({ error: 'Impersonation は admin のみ可能です' }, { status: 403 });
+      }
+      
+      const impersonated = await base44.asServiceRole.entities.User.filter({
+        email: impersonate_user_email
+      });
+      
+      if (impersonated.length === 0) {
+        return Response.json({ error: `Impersonate user not found: ${impersonate_user_email}` }, { status: 404 });
+      }
+      
+      effectiveUser = impersonated[0];
+      console.log(`🎭 Impersonating: ${impersonate_user_email}`);
+    }
+
+    // Re-evaluate permissions based on effective user
+    const effectiveIsAdmin = effectiveUser.role === 'admin' || effectiveUser.isAdmin === true || effectiveUser.isOwner === true;
+    const effectiveIsManager = effectiveUser.role === 'manager' || effectiveUser.app_role === '部長' || effectiveUser.app_role === '副管理者';
 
     // 部長の場合、自部署のみに強制固定（引数を無視）
     let targetDepartment = department_code;
@@ -35,13 +59,23 @@ Deno.serve(async (req) => {
       targetDepartment = user.department_code;
     }
 
-    console.log('🔍 User & Role Info:', {
+    console.log('🔍 Authenticated User:', {
       email: user.email,
       role: user.role,
       app_role: user.app_role,
       is_admin: isAdmin,
       is_manager: isManager,
       department_code: user.department_code
+    });
+    
+    console.log('🔍 Effective User:', {
+      email: effectiveUser.email,
+      role: effectiveUser.role,
+      app_role: effectiveUser.app_role,
+      is_admin: effectiveIsAdmin,
+      is_manager: effectiveIsManager,
+      department_code: effectiveUser.department_code,
+      is_impersonated: impersonate_user_email ? true : false
     });
     
     console.log('🔍 Query parameters:', {
@@ -195,11 +229,25 @@ Deno.serve(async (req) => {
           role: user.role,
           app_role: user.app_role
         },
+        auth_user: {
+          email: user.email,
+          role: user.role,
+          app_role: user.app_role,
+          is_admin: isAdmin,
+          is_manager: isManager
+        },
+        effective_user: {
+          email: effectiveUser.email,
+          role: effectiveUser.role,
+          app_role: effectiveUser.app_role,
+          department_code: effectiveUser.department_code,
+          is_admin: effectiveIsAdmin,
+          is_manager: effectiveIsManager,
+          is_impersonated: impersonate_user_email ? true : false
+        },
         query_info: {
           requested_department: department_code,
           target_department: targetDepartment,
-          is_admin: isAdmin,
-          is_manager: isManager,
           date_field: 'work_date',
           date_value: date
         },
