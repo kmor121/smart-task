@@ -38,7 +38,8 @@ function AccessDenied() {
 function TeamDailyLogInner({ user, isAdmin, isManager }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [submitFilter, setSubmitFilter] = useState("all");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
+  // 部長の場合は自部署に固定、管理者の場合は全てから選択可能
+  const [departmentFilter, setDepartmentFilter] = useState(isManager && !isAdmin ? (user?.department_code || "all") : "all");
   const [expandedItems, setExpandedItems] = useState([]);
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -148,8 +149,8 @@ function TeamDailyLogInner({ user, isAdmin, isManager }) {
             </SelectContent>
           </Select>
 
-          {/* 部署フィルタ（adminのみ） */}
-          {isAdmin && (
+          {/* 部署フィルタ */}
+          {isAdmin ? (
             <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
               <SelectTrigger className="w-40">
                 <SelectValue />
@@ -161,6 +162,10 @@ function TeamDailyLogInner({ user, isAdmin, isManager }) {
                 ))}
               </SelectContent>
             </Select>
+          ) : (
+            <div className="px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 text-sm text-slate-700">
+              {DEPT_LABELS[user?.department_code] || user?.department_code}（自部署のみ）
+            </div>
           )}
 
           <div className="ml-auto flex gap-2">
@@ -223,7 +228,7 @@ function TeamDailyLogInner({ user, isAdmin, isManager }) {
                 <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 rounded-lg">
                   <div className="flex items-center gap-3 w-full">
                     <div className="flex-1 text-left">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col">
                         <span className="font-medium text-slate-800">{userData.user_name}</span>
                         <span className="text-xs text-slate-400">
                           {DEPT_LABELS[userData.department_code] || userData.department_code}
