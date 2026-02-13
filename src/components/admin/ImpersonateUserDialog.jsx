@@ -7,12 +7,30 @@ import { UserCircle, Users, Search } from "lucide-react";
 
 const TEST_USERS = [
   { id: "test_admin", email: "test_admin@example.com", full_name: "管理者テスト", department_code: "admin", app_role: "管理者", role: "admin", isAdmin: true },
-  { id: "test_sales", email: "test_sales@example.com", full_name: "営業テスト", department_code: "sales", app_role: "一般", role: "user", isAdmin: false, isOwner: false },
-  { id: "test_design", email: "test_design@example.com", full_name: "制作テスト", department_code: "design", app_role: "一般", role: "user", isAdmin: false, isOwner: false },
-  { id: "test_print", email: "test_print@example.com", full_name: "印刷テスト", department_code: "print", app_role: "一般", role: "user", isAdmin: false, isOwner: false },
-  { id: "test_binding", email: "test_binding@example.com", full_name: "製本テスト", department_code: "binding", app_role: "一般", role: "user", isAdmin: false, isOwner: false },
-  { id: "test_general", email: "test_general@example.com", full_name: "総務テスト", department_code: "general", app_role: "一般", role: "user", isAdmin: false, isOwner: false },
+  { id: "test_sales_manager", email: "test_sales_manager@example.com", full_name: "営業部長", department_code: "sales", app_role: "部長", role: "manager", isAdmin: false, isOwner: false },
+  { id: "test_design_manager", email: "test_design_manager@example.com", full_name: "制作部長", department_code: "design", app_role: "部長", role: "manager", isAdmin: false, isOwner: false },
+  { id: "test_sales", email: "test_sales@example.com", full_name: "営業テスト", department_code: "sales", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
+  { id: "test_sales_2", email: "test_sales_2@example.com", full_name: "営業テスト2", department_code: "sales", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
+  { id: "test_design", email: "test_design@example.com", full_name: "制作テスト", department_code: "design", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
+  { id: "test_design_2", email: "test_design_2@example.com", full_name: "制作テスト2", department_code: "design", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
+  { id: "test_design_3", email: "test_design_3@example.com", full_name: "制作テスト3", department_code: "design", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
+  { id: "test_ict", email: "test_ict@example.com", full_name: "ICTテスト", department_code: "ict", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
+  { id: "test_print", email: "test_print@example.com", full_name: "印刷テスト", department_code: "print", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
+  { id: "test_print_2", email: "test_print_2@example.com", full_name: "印刷テスト2", department_code: "print", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
+  { id: "test_binding", email: "test_binding@example.com", full_name: "製本テスト", department_code: "binding", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
+  { id: "test_general", email: "test_general@example.com", full_name: "総務テスト", department_code: "general", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
 ];
+
+const DEPT_LABELS = {
+  admin: "管理部",
+  sales: "営業部",
+  design: "制作部",
+  ict: "ICT部",
+  print: "印刷部",
+  printing: "印刷部",
+  binding: "製本部",
+  general: "総務部",
+};
 
 export default function ImpersonateUserDialog({ open, onOpenChange }) {
   const handleSelectUser = (testUser) => {
