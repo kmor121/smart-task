@@ -71,12 +71,18 @@ export default function DebugPanel({ user, isAdmin, isManager, teamData }) {
                 </span>
               </div>
               {meta?.current_user && (
-                <div className="mt-2 text-[10px] text-slate-500">
-                  Frontend判定: isAdmin={isAdmin ? "✅" : "❌"} / isManager={isManager ? "✅" : "❌"}<br/>
-                  Backend判定: isAdmin={meta.query_info?.is_admin ? "✅" : "❌"} / isManager={meta.query_info?.is_manager ? "✅" : "❌"}
+                <div className="mt-2 text-[10px] text-slate-500 space-y-1">
+                  <div>
+                    <span className="text-slate-700 font-semibold">Frontend判定:</span> isAdmin={isAdmin ? "✅" : "❌"} / isManager={isManager ? "✅" : "❌"}<br/>
+                    <span className="text-slate-600 text-[9px]">logic: role=admin OR isAdmin OR isOwner</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-700 font-semibold">Backend判定:</span> isAdmin={meta.query_info?.is_admin ? "✅" : "❌"} / isManager={meta.query_info?.is_manager ? "✅" : "❌"}<br/>
+                    <span className="text-slate-600 text-[9px]">Backend role: {meta.current_user?.role || "N/A"} / app_role: {meta.current_user?.app_role || "N/A"}</span>
+                  </div>
                   {meta.query_info?.is_manager !== isManager && (
                     <div className="mt-1 p-1 bg-red-50 text-red-600 border border-red-200 rounded">
-                      ⚠️ Frontend と Backend の isManager が一致していません！ role が正しく設定されているか確認してください
+                      ⚠️ Frontend と Backend の isManager が一致しません！Backend の判定ロジックを確認してください
                     </div>
                   )}
                 </div>
