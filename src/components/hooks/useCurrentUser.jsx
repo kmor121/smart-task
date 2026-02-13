@@ -21,6 +21,9 @@ export default function useCurrentUser() {
             full_name: testUser.full_name,
             department_code: testUser.department_code,
             app_role: testUser.app_role,
+            role: testUser.role || "user",
+            isAdmin: testUser.isAdmin === true,
+            isOwner: testUser.isOwner === true,
             _isImpersonating: true,
             _realUser: me,
           });
