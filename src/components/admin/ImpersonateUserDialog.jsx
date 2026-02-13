@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { UserCircle, Users, Search } from "lucide-react";
+import { UserCircle, Users } from "lucide-react";
 
 const TEST_USERS = [
   { id: "test_admin", email: "test_admin@example.com", full_name: "管理者テスト", department_code: "admin", app_role: "管理者", role: "admin", isAdmin: true },
@@ -36,15 +36,13 @@ const DEPT_LABELS = {
 };
 
 export default function ImpersonateUserDialog({ open, onOpenChange }) {
-  const [searchTerm, setSearchTerm] = useState("");
-
   const handleSelectUser = (testUser) => {
     localStorage.setItem("impersonateUser", JSON.stringify(testUser));
     window.location.reload();
   };
 
   // 管理者・部長・一般に分類
-  const { admins, managers, staffByDept } = useMemo(() => {
+  const { admins, managers, allowedStaff } = useMemo(() => {
     const admins = TEST_USERS.filter(u => u.role === "admin").sort((a, b) => a.full_name.localeCompare(b.full_name));
     
     // 部長の表示順を固定
@@ -56,37 +54,14 @@ export default function ImpersonateUserDialog({ open, onOpenChange }) {
       return a.full_name.localeCompare(b.full_name);
     });
     
-    const staffUsers = TEST_USERS.filter(u => u.role === "staff");
-    const grouped = {};
-    staffUsers.forEach(u => {
-      if (!grouped[u.department_code]) grouped[u.department_code] = [];
-      grouped[u.department_code].push(u);
-    });
+    // 右カラムに表示する一般ユーザー（固定6名のみ）
+    const allowedNames = ["総務テスト", "営業テスト", "制作テスト", "ICTテスト", "印刷テスト", "製本テスト"];
+    const allowedStaff = allowedNames
+      .map(name => TEST_USERS.find(u => u.full_name === name))
+      .filter(Boolean);
     
-    // 各部署内で名前順ソート
-    Object.keys(grouped).forEach(dept => {
-      grouped[dept].sort((a, b) => a.full_name.localeCompare(b.full_name));
-    });
-    
-    return { admins, managers, staffByDept: grouped };
+    return { admins, managers, allowedStaff };
   }, []);
-
-  // 検索フィルタ
-  const filteredStaffByDept = useMemo(() => {
-    if (!searchTerm) return staffByDept;
-    
-    const filtered = {};
-    Object.entries(staffByDept).forEach(([dept, users]) => {
-      const matchedUsers = users.filter(u => 
-        u.full_name.includes(searchTerm) || 
-        DEPT_LABELS[u.department_code]?.includes(searchTerm)
-      );
-      if (matchedUsers.length > 0) {
-        filtered[dept] = matchedUsers;
-      }
-    });
-    return filtered;
-  }, [staffByDept, searchTerm]);
 
   const UserButton = ({ user }) => (
     <button
@@ -152,35 +127,10 @@ export default function ImpersonateUserDialog({ open, onOpenChange }) {
                 <span className="w-1 h-4 bg-blue-500 rounded" />
                 一般ユーザー
               </h3>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  placeholder="名前・部署で検索..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 h-9 text-sm"
-                />
-              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-              {Object.keys(filteredStaffByDept).length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-4">該当なし</p>
-              ) : (
-                Object.entries(filteredStaffByDept)
-                  .sort(([deptA], [deptB]) => deptA.localeCompare(deptB))
-                  .map(([dept, users]) => (
-                    <div key={dept}>
-                      <h4 className="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1">
-                        {DEPT_LABELS[dept] || dept}
-                        <span className="text-slate-400">({users.length})</span>
-                      </h4>
-                      <div className="space-y-1.5">
-                        {users.map(user => <UserButton key={user.id} user={user} />)}
-                      </div>
-                    </div>
-                  ))
-              )}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+              {allowedStaff.map(user => <UserButton key={user.id} user={user} />)}
             </div>
           </div>
         </div>
