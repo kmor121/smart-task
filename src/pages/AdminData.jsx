@@ -144,11 +144,12 @@ export default function AdminData() {
       </div>
 
       <Tabs defaultValue="clients" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="clients">顧客管理</TabsTrigger>
-          <TabsTrigger value="projects">案件管理</TabsTrigger>
-          <TabsTrigger value="reset">データリセット</TabsTrigger>
-        </TabsList>
+         <TabsList>
+           <TabsTrigger value="clients">顧客管理</TabsTrigger>
+           <TabsTrigger value="projects">案件管理</TabsTrigger>
+           <TabsTrigger value="seed">テストユーザー作成</TabsTrigger>
+           <TabsTrigger value="reset">データリセット</TabsTrigger>
+         </TabsList>
 
         {/* 顧客管理 */}
         <TabsContent value="clients">
@@ -222,8 +223,28 @@ export default function AdminData() {
           </Card>
         </TabsContent>
 
+        {/* テストユーザー作成 */}
+         <TabsContent value="seed">
+           <Card className="border-blue-200">
+             <CardHeader>
+               <CardTitle className="text-lg">テストユーザー自動作成</CardTitle>
+             </CardHeader>
+             <CardContent className="space-y-4">
+               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                 <p className="text-sm text-blue-800 font-medium mb-2">ℹ️ 説明</p>
+                 <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                   <li>制作（design）部署に 6 人のテストユーザーを自動作成します</li>
+                   <li>既存ユーザーは更新されます</li>
+                   <li>作成後は「部署の日報」で確認できます</li>
+                 </ul>
+               </div>
+               <SeedTestUsersButton queryClient={queryClient} />
+             </CardContent>
+           </Card>
+         </TabsContent>
+
         {/* データリセット */}
-        <TabsContent value="reset">
+         <TabsContent value="reset">
           <Card className="border-red-200">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2 text-red-600">

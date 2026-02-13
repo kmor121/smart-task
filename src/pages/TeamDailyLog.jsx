@@ -46,22 +46,29 @@ function TeamDailyLogInner({ user, isAdmin, isManager }) {
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
   // 部署の日報データを取得（キャッシュ無効化）
-  const { data: teamData, isLoading, refetch } = useQuery({
-    queryKey: ["teamDailyLogs", dateStr, departmentFilter],
-    queryFn: async () => {
-      const response = await base44.functions.invoke("getTeamDailyLogs", {
-        date: dateStr,
-        department_code: departmentFilter === "all" ? null : departmentFilter
-      });
-      console.log('📊 Team Daily Logs Response:', response.data);
-      return response.data;
-    },
-    enabled: !!user && (isAdmin || isManager),
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always'
-  });
+   const { data: teamData, isLoading, refetch } = useQuery({
+     queryKey: ["teamDailyLogs", dateStr, departmentFilter],
+     queryFn: async () => {
+       const payload = {
+         date: dateStr,
+         department_code: departmentFilter === "all" ? null : departmentFilter
+       };
+
+       // Admin がなりかわり中の場合、impersonate_user_email を渡す
+       if (isAdmin && user?._isImpersonating) {
+         payload.impersonate_user_email = user.email;
+       }
+
+       const response = await base44.functions.invoke("getTeamDailyLogs", payload);
+       console.log('📊 Team Daily Logs Response:', response.data);
+       return response.data;
+     },
+     enabled: !!user && (isAdmin || isManager),
+     staleTime: 0,
+     gcTime: 0,
+     refetchOnWindowFocus: true,
+     refetchOnMount: 'always'
+   });
 
   const users = teamData?.users || [];
 

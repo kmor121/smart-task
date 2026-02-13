@@ -90,6 +90,31 @@ export default function DebugPanel({ user, isAdmin, isManager, teamData }) {
             </div>
           </div>
 
+          {/* Request Parameters */}
+          {meta && (
+            <div className="bg-white rounded-md p-3 border border-purple-100">
+              <h4 className="font-semibold text-purple-900 mb-2">📤 Request to Backend</h4>
+              <div className="space-y-1 text-[10px] text-slate-600 font-mono">
+                <div>date: {meta.query_info?.date_value || "N/A"}</div>
+                <div>requested_department: {meta.query_info?.requested_department || "null"}</div>
+                <div>
+                  impersonate_user_email: 
+                  {meta.effective_user?.is_impersonated ? (
+                    <span className="text-purple-700 font-semibold"> {meta.effective_user.email}</span>
+                  ) : (
+                    <span className="text-slate-400"> (none)</span>
+                  )}
+                </div>
+                <div>
+                  effective_user_source: 
+                  <span className="font-semibold ml-1">
+                    {meta.effective_user?.is_impersonated ? "impersonate" : "auth"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Backend Effective User */}
           {meta?.effective_user && (
             <div className="bg-white rounded-md p-3 border border-blue-100">
