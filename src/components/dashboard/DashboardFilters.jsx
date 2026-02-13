@@ -3,7 +3,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function DashboardFilters({ filters, onChange, clients, departments }) {
+const DEPT_LABELS = {
+  sales: "営業部",
+  design: "制作部",
+  ict: "ICT部",
+  print: "印刷部",
+  printing: "印刷部",
+  binding: "製本部",
+  general: "総務部",
+  admin: "管理者",
+};
+
+export default function DashboardFilters({ filters, onChange, clients, departments, isManager, userDepartment }) {
   const update = (field, value) => {
     onChange({ ...filters, [field]: value === "_all" ? "" : value });
   };
@@ -40,19 +51,25 @@ export default function DashboardFilters({ filters, onChange, clients, departmen
       </div>
       <div>
         <Label className="text-xs text-slate-500 mb-1 block">部署</Label>
-        <Select value={filters.departmentCode || "_all"} onValueChange={v => update("departmentCode", v)}>
-          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_all">すべて</SelectItem>
-            <SelectItem value="sales">営業部</SelectItem>
-            <SelectItem value="design">制作部</SelectItem>
-            <SelectItem value="print">印刷部</SelectItem>
-            <SelectItem value="binding">製本部</SelectItem>
-            <SelectItem value="general">総務部</SelectItem>
-            <SelectItem value="admin">管理者</SelectItem>
-            <SelectItem value="ict">ICT部</SelectItem>
-          </SelectContent>
-        </Select>
+        {isManager ? (
+          <div className="h-9 px-3 py-2 border border-slate-200 rounded-md bg-slate-50 text-sm text-slate-700 flex items-center">
+            {DEPT_LABELS[userDepartment] || userDepartment}（固定）
+          </div>
+        ) : (
+          <Select value={filters.departmentCode || "_all"} onValueChange={v => update("departmentCode", v)}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all">すべて</SelectItem>
+              <SelectItem value="sales">営業部</SelectItem>
+              <SelectItem value="design">制作部</SelectItem>
+              <SelectItem value="print">印刷部</SelectItem>
+              <SelectItem value="binding">製本部</SelectItem>
+              <SelectItem value="general">総務部</SelectItem>
+              <SelectItem value="admin">管理者</SelectItem>
+              <SelectItem value="ict">ICT部</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
     </div>
   );
