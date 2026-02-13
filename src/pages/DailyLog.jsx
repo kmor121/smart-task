@@ -193,9 +193,11 @@ export default function DailyLog() {
         const newProject = response.data.project;
         
         // マスタデータを再取得して完了を待つ
-        await queryClient.invalidateQueries({ queryKey: ['masterData'] });
         await queryClient.invalidateQueries({ queryKey: ['projects'] });
-        await queryClient.refetchQueries({ queryKey: ['masterData'] });
+        await queryClient.invalidateQueries({ queryKey: ['clients'] });
+        await queryClient.refetchQueries({ queryKey: ['projects'] });
+        
+        console.log('✅ Created project:', newProject);
         
         // 該当行に自動選択（文字列IDで統一）
         handleRowChange(selectedRowForNewProject, {
@@ -212,12 +214,14 @@ export default function DailyLog() {
         setNewProjectForm({ client_name: "", name: "" });
         setSelectedRowForNewProject(null);
       } else {
-        throw new Error(response.data?.error || "案件の作成に失敗しました");
+        const errorMsg = response.data?.error || "案件の作成に失敗しました";
+        console.error('❌ Project creation failed:', response.data);
+        throw new Error(errorMsg);
       }
     } catch (error) {
-      console.error("Failed to create project:", error);
-      const errorMsg = error.response?.data?.error || error.message || "作成できませんでした";
-      toast.error(errorMsg);
+      console.error("❌ Failed to create project:", error);
+      const errorMsg = error.response?.data?.error || error.response?.data?.details || error.message || "作成できませんでした";
+      toast.error(`案件作成エラー: ${errorMsg}`);
     } finally {
       setSaving(false);
     }

@@ -40,8 +40,20 @@ Deno.serve(async (req) => {
 
     const project = await base44.asServiceRole.entities.Project.create(projectData);
 
+    console.log('✅ Project created successfully:', {
+      id: project.id,
+      name: project.name,
+      client_id: project.client_id,
+      client_name: project.client_name,
+      status: project.status
+    });
+
     return Response.json({ success: true, project });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('❌ Project creation failed:', error);
+    return Response.json({ 
+      error: error.message || '案件の作成に失敗しました',
+      details: error.toString()
+    }, { status: 500 });
   }
 });

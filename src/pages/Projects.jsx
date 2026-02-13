@@ -35,16 +35,24 @@ export default function ProjectsPage() {
   const createMutation = useMutation({
     mutationFn: async (data) => {
       const response = await base44.functions.invoke('createProject', data);
+      console.log('Project creation response:', response.data);
+      if (!response.data?.success) {
+        throw new Error(response.data?.error || "案件の作成に失敗しました");
+      }
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
       setDialogOpen(false);
       setFormData({ name: "", client_name: "", status: "見込み" });
-      toast.success("案件を作成しました");
+      console.log('✅ Project created:', data.project);
+      toast.success(`案件「${data.project.name}」を作成しました`);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || "案件の作成に失敗しました");
+      console.error('❌ Project creation error:', error);
+      const errorMsg = error.response?.data?.error || error.response?.data?.details || error.message || "案件の作成に失敗しました";
+      toast.error(`エラー: ${errorMsg}`);
     }
   });
 
