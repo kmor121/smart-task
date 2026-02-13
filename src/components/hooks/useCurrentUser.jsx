@@ -12,7 +12,9 @@ export default function useCurrentUser() {
         
         // テストユーザー切替（Preview環境専用）
         const impersonateData = localStorage.getItem("impersonateUser");
-        if (impersonateData) {
+        const impersonateUserEmail = sessionStorage.getItem("impersonate_user_email");
+
+        if (impersonateData && impersonateUserEmail) {
           const testUser = JSON.parse(impersonateData);
           setUser({
             ...me,
@@ -26,6 +28,7 @@ export default function useCurrentUser() {
             isOwner: testUser.isOwner === true,
             _isImpersonating: true,
             _realUser: me,
+            _impersonate_user_email: impersonateUserEmail,
           });
         } else {
           setUser(me);

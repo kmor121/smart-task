@@ -31,6 +31,7 @@ export default function Layout({ children, currentPageName }) {
   
   const handleStopImpersonate = () => {
     localStorage.removeItem("impersonateUser");
+    sessionStorage.removeItem("impersonate_user_email");
     window.location.reload();
   };
 
