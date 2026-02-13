@@ -230,8 +230,8 @@ export default function Dashboard() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-100">
-                      <th className="text-left px-5 py-3 text-xs font-medium text-slate-500">案件名</th>
                       <th className="text-left px-5 py-3 text-xs font-medium text-slate-500">顧客</th>
+                      <th className="text-left px-5 py-3 text-xs font-medium text-slate-500">案件名</th>
                       <th className="text-right px-5 py-3 text-xs font-medium text-slate-500">総作業時間</th>
                       <th className="text-right px-5 py-3 text-xs font-medium text-slate-500">修正時間</th>
                       <th className="text-right px-5 py-3 text-xs font-medium text-slate-500">修正率</th>
@@ -240,6 +240,7 @@ export default function Dashboard() {
                   <tbody>
                     {projectStats.map(stat => (
                       <tr key={stat.project_id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                        <td className="px-5 py-3 text-slate-600">{stat.client_name || "—"}</td>
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-slate-800">{stat.project_name}</span>
@@ -248,7 +249,6 @@ export default function Dashboard() {
                             )}
                           </div>
                         </td>
-                        <td className="px-5 py-3 text-slate-600">{stat.client_name || "—"}</td>
                         <td className="px-5 py-3 text-right font-mono text-slate-800">{fmtTime(stat.total_minutes)}</td>
                         <td className="px-5 py-3 text-right font-mono text-orange-600">{fmtTime(stat.revision_minutes)}</td>
                         <td className="px-5 py-3 text-right">
