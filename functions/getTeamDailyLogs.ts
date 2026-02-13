@@ -49,14 +49,14 @@ Deno.serve(async (req) => {
 
     // 部長の場合、自部署のみに強制固定（引数を無視）
     let targetDepartment = department_code;
-    if (isManager && !isAdmin) {
-      targetDepartment = user.department_code; // 必ず自部署
+    if (effectiveIsManager && !effectiveIsAdmin) {
+      targetDepartment = effectiveUser.department_code; // 必ず自部署
     }
     
     // 部長の場合は必ず自部署のみ（リクエストの department_code は無視）
-    if (isManager && !isAdmin && department_code !== user.department_code) {
-      console.log(`⚠️ Manager ${user.email} attempted to access ${department_code}, forcing to own department: ${user.department_code}`);
-      targetDepartment = user.department_code;
+    if (effectiveIsManager && !effectiveIsAdmin && department_code !== effectiveUser.department_code) {
+      console.log(`⚠️ Manager ${effectiveUser.email} attempted to access ${department_code}, forcing to own department: ${effectiveUser.department_code}`);
+      targetDepartment = effectiveUser.department_code;
     }
 
     console.log('🔍 Authenticated User:', {

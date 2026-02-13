@@ -90,14 +90,44 @@ export default function DebugPanel({ user, isAdmin, isManager, teamData }) {
             </div>
           </div>
 
+          {/* Backend Effective User */}
+          {meta?.effective_user && (
+            <div className="bg-white rounded-md p-3 border border-blue-100">
+              <h4 className="font-semibold text-blue-900 mb-2">🎭 Backend Effective User</h4>
+              <div className="space-y-1 text-[10px]">
+                <div>
+                  <span className="text-slate-500">email:</span>{" "}
+                  <span className="font-mono font-semibold text-blue-600">{meta.effective_user.email}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">role:</span> {meta.effective_user.role || "N/A"} | 
+                  <span className="text-slate-500"> app_role:</span> {meta.effective_user.app_role || "N/A"}
+                </div>
+                <div>
+                  <span className="text-slate-500">department_code:</span>{" "}
+                  <span className="font-mono font-semibold text-emerald-600">{meta.effective_user.department_code || "未設定"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">isAdmin:</span> {meta.effective_user.is_admin ? "✅" : "❌"} | 
+                  <span className="text-slate-500"> isManager:</span> {meta.effective_user.is_manager ? "✅" : "❌"}
+                </div>
+                {meta.effective_user.is_impersonated && (
+                  <div className="mt-1 p-1 bg-amber-50 border border-amber-200 rounded text-amber-700">
+                    🎭 Impersonating
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Department Filter */}
           {meta && (
             <div className="bg-white rounded-md p-3 border border-amber-100">
               <h4 className="font-semibold text-amber-900 mb-2">🎯 部署フィルタ</h4>
               <div className="space-y-1">
                 <div>
-                  <span className="text-slate-500">現在のユーザー部署:</span>{" "}
-                  <span className="font-mono font-semibold text-blue-600">{user?.department_code || "未設定"}</span>
+                  <span className="text-slate-500">認証ユーザー部署:</span>{" "}
+                  <span className="font-mono font-semibold text-blue-600">{meta.auth_user?.department_code || user?.department_code || "未設定"}</span>
                 </div>
                 <div>
                   <span className="text-slate-500">リクエスト部署:</span>{" "}
@@ -109,14 +139,9 @@ export default function DebugPanel({ user, isAdmin, isManager, teamData }) {
                     {meta.query_info?.target_department || "null (全社)"}
                   </span>
                 </div>
-                {isManager && !isAdmin && (
+                {meta.effective_user?.is_manager && !meta.effective_user?.is_admin && (
                   <div className="text-amber-700 text-[10px] mt-1">
-                    ✅ 部長は自部署固定（{user?.department_code}）
-                  </div>
-                )}
-                {!user?.department_code && (
-                  <div className="mt-2 p-1 bg-red-50 text-red-600 border border-red-200 rounded text-[10px]">
-                    ⚠️ 現在のユーザーの department_code が未設定です！
+                    ✅ 部長は自部署固定（{meta.effective_user.department_code}）
                   </div>
                 )}
               </div>
