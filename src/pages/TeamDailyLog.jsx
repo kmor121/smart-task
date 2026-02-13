@@ -21,8 +21,21 @@ const DEPT_LABELS = {
   general: "総務"
 };
 
-export default function TeamDailyLog() {
-  const { user, loading: userLoading, isAdmin, isManager } = useCurrentUser();
+// アクセス拒否画面
+function AccessDenied() {
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+        <h2 className="text-lg font-semibold text-red-800 mb-2">アクセス権限がありません</h2>
+        <p className="text-sm text-red-600">この画面は部長または管理者のみアクセス可能です</p>
+      </div>
+    </div>
+  );
+}
+
+// 内側コンポーネント（データ取得とUI描画）
+function TeamDailyLogInner({ user, isAdmin, isManager }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [submitFilter, setSubmitFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
@@ -42,10 +55,10 @@ export default function TeamDailyLog() {
       return response.data;
     },
     enabled: !!user && (isAdmin || isManager),
-    staleTime: 0, // 常に最新を取得
-    gcTime: 0, // キャッシュを保持しない
-    refetchOnWindowFocus: true, // ウィンドウフォーカス時に再取得
-    refetchOnMount: 'always' // マウント時に必ず再取得
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always'
   });
 
   const users = teamData?.users || [];
@@ -88,27 +101,6 @@ export default function TeamDailyLog() {
     const m = minutes % 60;
     return m > 0 ? `${h}:${m.toString().padStart(2, '0')}` : `${h}:00`;
   };
-
-  // アクセス制御チェック（フック呼び出し後）
-  if (userLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-      </div>
-    );
-  }
-
-  if (!isAdmin && !isManager) {
-    return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
-          <h2 className="text-lg font-semibold text-red-800 mb-2">アクセス権限がありません</h2>
-          <p className="text-sm text-red-600">この画面は部長または管理者のみアクセス可能です</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
@@ -314,4 +306,26 @@ export default function TeamDailyLog() {
       )}
     </div>
   );
+}
+
+// 外側コンポーネント（認証と権限チェックのみ）
+export default function TeamDailyLog() {
+  const { user, loading: userLoading, isAdmin, isManager } = useCurrentUser();
+
+  // ローディング中
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+      </div>
+    );
+  }
+
+  // 権限チェック
+  if (!isAdmin && !isManager) {
+    return <AccessDenied />;
+  }
+
+  // 権限OK - 内側コンポーネントを描画
+  return <TeamDailyLogInner user={user} isAdmin={isAdmin} isManager={isManager} />;
 }
