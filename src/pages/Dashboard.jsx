@@ -41,10 +41,19 @@ export default function Dashboard() {
       if (filters.startDate && log.work_date < filters.startDate) return false;
       if (filters.endDate && log.work_date > filters.endDate) return false;
       if (filters.clientId && log.client_id !== filters.clientId) return false;
-      if (filters.departmentCode && log.department_code !== filters.departmentCode) return false;
+      
+      // 部署フィルタ：department_code で絞り込み
+      if (filters.departmentCode) {
+        // 既存データ互換：department_code が無い場合は department_name から逆引き
+        const logDeptCode = log.department_code || 
+          departments.find(d => d.name === log.department_name)?.code || "";
+        
+        if (logDeptCode !== filters.departmentCode) return false;
+      }
+      
       return true;
     });
-  }, [workLogs, filters]);
+  }, [workLogs, filters, departments]);
 
   // 案件ごとの集計
   const projectStats = useMemo(() => {
