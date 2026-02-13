@@ -53,72 +53,37 @@ Deno.serve(async (req) => {
     
     console.log('👥 Target users:', targetUsers.length, 'users found for department:', targetDepartment);
 
-    // デバッグ: まず日付だけでWorkLogを取得してデータ構造を確認
-    const allLogsForDate = await base44.asServiceRole.entities.WorkLog.filter({
-      work_date: date
-    });
-    
-    console.log(`\n🔍 DEBUG: Total WorkLog records for date ${date}:`, allLogsForDate.length);
-    
-    // サンプル1件を取得してフィールドを確認
-    let sampleLog = null;
-    if (allLogsForDate.length > 0) {
-      sampleLog = allLogsForDate[0];
-      console.log('📄 Sample WorkLog fields:', {
-        id: sampleLog.id,
-        work_date: sampleLog.work_date,
-        user_email: sampleLog.user_email,
-        user_name: sampleLog.user_name,
-        status: sampleLog.status,
-        submitted_at: sampleLog.submitted_at,
-        created_by: sampleLog.created_by,
-        all_keys: Object.keys(sampleLog)
-      });
-    }
-    
     // 各ユーザーの日報を取得
     const userDailyLogs = [];
 
     for (const targetUser of targetUsers) {
-      console.log(`\n📝 Fetching logs for user: ${targetUser.email} (${targetUser.display_name})`);
-      console.log(`  Target user ID: ${targetUser.id}`);
-      
-      // DailyLogページと完全に同じ検索条件: WorkLogエンティティ、work_date（文字列）、user_email
-      const logs = await base44.asServiceRole.entities.WorkLog.filter({
+      // DailyLogページと完全に同じ検索条件: work_date + user_email
+      // ※ user_emailが入っていない古いデータはcreated_byでフォールバック
+      let logs = await base44.asServiceRole.entities.WorkLog.filter({
         user_email: targetUser.email,
         work_date: date
       });
       
-      console.log(`  → Found ${logs.length} WorkLog records for user_email=${targetUser.email}`);
+      let usedField = 'user_email';
       
-      // デバッグ: user_emailだけで検索
-      const logsByEmail = await base44.asServiceRole.entities.WorkLog.filter({
-        user_email: targetUser.email
-      });
-      console.log(`  → Found ${logsByEmail.length} WorkLog records for user_email (all dates)`);
-      
-      // デバッグ: created_byで検索してみる
-      const logsByCreatedBy = await base44.asServiceRole.entities.WorkLog.filter({
-        created_by: targetUser.email,
-        work_date: date
-      });
-      console.log(`  → Found ${logsByCreatedBy.length} WorkLog records for created_by=${targetUser.email}`);
-      
-      // 実際に使うログ（user_emailとcreated_byの両方を試す）
-      const actualLogs = logs.length > 0 ? logs : logsByCreatedBy;
-      console.log(`  → Using ${actualLogs.length} logs for this user`);
-      
-      if (actualLogs.length > 0) {
-        console.log('  → Log statuses:', actualLogs.map(l => ({ id: l.id, status: l.status, submitted_at: l.submitted_at })));
+      // user_emailで見つからない場合のみcreated_byでフォールバック
+      if (logs.length === 0) {
+        logs = await base44.asServiceRole.entities.WorkLog.filter({
+          created_by: targetUser.email,
+          work_date: date
+        });
+        if (logs.length > 0) {
+          usedField = 'created_by (fallback)';
+        }
       }
+      
 
-      // DailyLogと完全に同じ提出判定ロジック (pages/DailyLog line 365)
-      // isSubmitted = existingLogs.some(l => l.status === "提出済" || l.status === "承認済");
-      const isSubmitted = actualLogs.some(l => l.status === '提出済' || l.status === '承認済');
+      // DailyLogと完全に同じ提出判定ロジック
+      const isSubmitted = logs.some(l => l.status === '提出済' || l.status === '承認済');
       
       // 提出済みログから最新のsubmitted_atを取得
       let submittedAt = null;
-      const submittedLogs = actualLogs.filter(l => l.status === '提出済' || l.status === '承認済');
+      const submittedLogs = logs.filter(l => l.status === '提出済' || l.status === '承認済');
       if (submittedLogs.length > 0) {
         const withSubmittedAt = submittedLogs.filter(l => l.submitted_at);
         if (withSubmittedAt.length > 0) {
@@ -129,49 +94,18 @@ Deno.serve(async (req) => {
       }
       
       // 合計時間
-      const totalMinutes = actualLogs.reduce((sum, log) => sum + (log.duration_minutes || 0), 0);
+      const totalMinutes = logs.reduce((sum, log) => sum + (log.duration_minutes || 0), 0);
 
-      console.log(`  → Is submitted: ${isSubmitted}, Total minutes: ${totalMinutes}`);
-
-      // 強化されたデバッグ情報
+      // デバッグ情報（開発時のみ表示）
       const debugInfo = {
-        sample_worklog: sampleLog ? {
-          id: sampleLog.id,
-          work_date: sampleLog.work_date,
-          user_email: sampleLog.user_email,
-          created_by: sampleLog.created_by,
-          status: sampleLog.status
-        } : null,
-        query_attempts: {
-          date_field: 'work_date',
-          date_value: date,
-          user_field_tried: 'user_email',
-          user_value: targetUser.email,
-          logs_by_user_email: logs.length,
-          logs_by_created_by: logsByCreatedBy.length,
-          logs_by_email_all_dates: logsByEmail.length,
-          logs_by_date_only: allLogsForDate.length
-        },
-        user_info: {
-          user_id: targetUser.id,
-          user_email: targetUser.email,
-          user_full_name: targetUser.full_name,
-          user_display_name: targetUser.display_name,
-          user_department: targetUser.department_code
-        },
-        fetch_result: {
-          total_logs_found: actualLogs.length,
-          log_ids: actualLogs.map(l => l.id)
-        },
-        submission_check: {
-          is_submitted: isSubmitted,
-          logs_with_status: actualLogs.map(l => ({
-            id: l.id,
-            status: l.status,
-            submitted_at: l.submitted_at,
-            is_submitted_status: l.status === '提出済' || l.status === '承認済'
-          }))
-        }
+        user_email: targetUser.email,
+        display_name: targetUser.display_name,
+        department: targetUser.department_code,
+        query_field: usedField,
+        query_value: targetUser.email,
+        logs_found: logs.length,
+        is_submitted: isSubmitted,
+        total_minutes: totalMinutes
       };
 
       userDailyLogs.push({
@@ -182,7 +116,7 @@ Deno.serve(async (req) => {
         is_submitted: isSubmitted,
         submitted_at: submittedAt,
         total_minutes: totalMinutes,
-        entries: actualLogs.map(log => ({
+        entries: logs.map(log => ({
           client_name: log.client_name || '',
           project_name: log.project_name || '',
           work_category_name: log.work_category_name || '',
