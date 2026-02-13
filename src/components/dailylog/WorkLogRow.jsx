@@ -185,16 +185,27 @@ export default function WorkLogRow({
               )}
             </SelectContent>
           </Select>
-          {isSales && (
-            <button
-              type="button"
-              onClick={onCreateNewProject}
-              className="text-xs text-blue-600 hover:text-blue-700 mt-1 inline-flex items-center gap-1 cursor-pointer"
-            >
-              <Plus className="w-3 h-3" />
-              新規案件作成
-            </button>
-          )}
+          <div className="flex items-center gap-2 mt-1">
+            {isSales && (
+              <button
+                type="button"
+                onClick={onCreateNewProject}
+                className="text-xs text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3 h-3" />
+                新規案件作成
+              </button>
+            )}
+            {canManageProjects && row.project_id && (
+              <button
+                type="button"
+                onClick={() => onEditProject?.(row.project_id)}
+                className="text-xs text-slate-500 hover:text-slate-700 inline-flex items-center gap-1 cursor-pointer"
+              >
+                案件名を編集
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

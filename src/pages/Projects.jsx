@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tantml:react-query";
 import useCurrentUser from "../components/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Building2 } from "lucide-react";
+import { Plus, Search, Building2, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import EditProjectDialog from "../components/projects/EditProjectDialog";
 
 export default function ProjectsPage() {
   const { user, loading, isSales } = useCurrentUser();
@@ -17,6 +18,8 @@ export default function ProjectsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({ name: "", client_name: "", status: "見込み" });
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['projects'],
@@ -185,9 +188,22 @@ export default function ProjectsPage() {
             {filteredProjects.map((project) => (
               <Card key={project.id}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{project.name}</CardTitle>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg truncate">{project.name}</CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 flex-shrink-0"
+                          onClick={() => {
+                            setEditingProject(project);
+                            setEditDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-slate-500" />
+                        </Button>
+                      </div>
                       <p className="text-sm text-slate-500 mt-1">顧客: {project.client_name}</p>
                     </div>
                     <Badge className={statusColors[project.status] || statusColors["見込み"]}>
@@ -206,6 +222,16 @@ export default function ProjectsPage() {
           </div>
         )}
       </div>
+
+      {/* 案件名編集モーダル */}
+      <EditProjectDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        project={editingProject}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["projects"] });
+        }}
+      />
     </div>
   );
 }
