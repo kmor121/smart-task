@@ -13,16 +13,26 @@ import {
   X,
   LogOut,
   ChevronRight,
-  FileText
+  FileText,
+  UserCog
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import ImpersonateUserDialog from "./components/admin/ImpersonateUserDialog";
 
 export default function Layout({ children, currentPageName }) {
   const { user, loading, isAdmin, isSubAdmin, canManageProjects, canReassign } = useCurrentUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [impersonateDialogOpen, setImpersonateDialogOpen] = useState(false);
+  
+  const isImpersonating = user?._isImpersonating || false;
+  
+  const handleStopImpersonate = () => {
+    localStorage.removeItem("impersonateUser");
+    window.location.reload();
+  };
 
   // 未提出＋変更あり件数を取得
   const { data: myLogs = [] } = useQuery({
@@ -88,6 +98,8 @@ export default function Layout({ children, currentPageName }) {
     { name: "管理者機能", page: "AdminData", icon: Settings, show: isAdmin },
   ];
 
+  const showImpersonateOption = user?._realUser && (user._realUser.role === "admin" || user._realUser.isOwner || user._realUser.isAdmin);
+
   const deptLabel = user.department_code || "未設定";
   const roleLabel = user.app_role || "一般";
 
@@ -152,6 +164,17 @@ export default function Layout({ children, currentPageName }) {
                 </Link>
               );
             })}
+
+            {/* テストユーザー切替（管理者のみ） */}
+            {showImpersonateOption && (
+              <button
+                onClick={() => setImpersonateDialogOpen(true)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all"
+              >
+                <UserCog className="w-4 h-4 flex-shrink-0" />
+                テストユーザー切替
+              </button>
+            )}
           </nav>
 
           {/* User info */}
@@ -178,6 +201,26 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* テストユーザーバナー */}
+        {isImpersonating && (
+          <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between sticky top-0 z-40">
+            <div className="flex items-center gap-2">
+              <UserCog className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                テストユーザーで表示中：{user.full_name}（{user.department_code}）
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleStopImpersonate}
+              className="text-white hover:bg-amber-600 h-7 text-xs"
+            >
+              解除
+            </Button>
+          </div>
+        )}
+
         {/* Mobile header */}
         <header className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-30">
           <button onClick={() => setSidebarOpen(true)} className="p-1">
@@ -190,6 +233,12 @@ export default function Layout({ children, currentPageName }) {
           {children}
         </main>
       </div>
-    </div>
-  );
-}
+
+      {/* テストユーザー切替ダイアログ */}
+      <ImpersonateUserDialog 
+        open={impersonateDialogOpen} 
+        onOpenChange={setImpersonateDialogOpen} 
+      />
+      </div>
+      );
+      }

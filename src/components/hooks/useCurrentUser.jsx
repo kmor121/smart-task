@@ -9,7 +9,24 @@ export default function useCurrentUser() {
     const load = async () => {
       try {
         const me = await base44.auth.me();
-        setUser(me);
+        
+        // テストユーザー切替（Preview環境専用）
+        const impersonateData = localStorage.getItem("impersonateUser");
+        if (impersonateData) {
+          const testUser = JSON.parse(impersonateData);
+          setUser({
+            ...me,
+            id: testUser.id,
+            email: testUser.email,
+            full_name: testUser.full_name,
+            department_code: testUser.department_code,
+            app_role: testUser.app_role,
+            _isImpersonating: true,
+            _realUser: me,
+          });
+        } else {
+          setUser(me);
+        }
       } catch (e) {
         console.error("Failed to load user:", e);
       } finally {
