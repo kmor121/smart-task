@@ -269,18 +269,30 @@ export default function DailyLog() {
   };
 
   const saveWorkLogs = async (submitStatus) => {
+    const isSubmit = submitStatus === "提出済";
+    
     // バリデーション（部署別）
     let invalid = false;
     let errorMessage = "";
     
     if (isSales) {
-      // 営業部：顧客・案件・作業区分・作業時間が必須
-      invalid = rows.some(r => !r.client_id || !r.project_id || !r.work_category_id || !r.duration_minutes);
-      errorMessage = "顧客・案件・作業区分・作業時間は必須です";
+      // 営業部：顧客・案件・作業区分が必須、提出時は作業時間1分以上
+      if (isSubmit) {
+        invalid = rows.some(r => !r.client_id || !r.project_id || !r.work_category_id || !r.duration_minutes || r.duration_minutes < 1);
+        errorMessage = "顧客・案件・作業区分は必須、作業時間は1分以上入力してください";
+      } else {
+        invalid = rows.some(r => !r.client_id || !r.project_id || !r.work_category_id);
+        errorMessage = "顧客・案件・作業区分は必須です";
+      }
     } else {
-      // その他の部署：作業区分・作業時間が必須（顧客・案件は任意）
-      invalid = rows.some(r => !r.work_category_id || !r.duration_minutes);
-      errorMessage = "作業区分・作業時間は必須です";
+      // その他の部署：作業区分が必須、提出時は作業時間1分以上
+      if (isSubmit) {
+        invalid = rows.some(r => !r.work_category_id || !r.duration_minutes || r.duration_minutes < 1);
+        errorMessage = "作業区分は必須、作業時間は1分以上入力してください";
+      } else {
+        invalid = rows.some(r => !r.work_category_id);
+        errorMessage = "作業区分は必須です";
+      }
     }
     
     if (invalid) {
@@ -288,7 +300,6 @@ export default function DailyLog() {
       return;
     }
 
-    const isSubmit = submitStatus === "提出済";
     const isUpdate = existingLogs.length > 0;
 
     if (isSubmit) {
@@ -461,9 +472,9 @@ export default function DailyLog() {
                 (isSubmitted && !hasLocalChanges) ||
                 rows.some(r => {
                   if (isSales) {
-                    return !r.client_id || !r.project_id || !r.work_category_id || !r.duration_minutes;
+                    return !r.client_id || !r.project_id || !r.work_category_id || !r.duration_minutes || r.duration_minutes < 1;
                   }
-                  return !r.work_category_id || !r.duration_minutes;
+                  return !r.work_category_id || !r.duration_minutes || r.duration_minutes < 1;
                 })
               }
               className="flex-1 gap-2 bg-slate-900 hover:bg-slate-800"
