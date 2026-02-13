@@ -43,7 +43,7 @@ export default function TeamDailyLog() {
     );
   }
 
-  // 部署の日報データを取得
+  // 部署の日報データを取得（キャッシュ無効化）
   const { data: teamData, isLoading, refetch } = useQuery({
     queryKey: ["teamDailyLogs", dateStr, departmentFilter],
     queryFn: async () => {
@@ -51,12 +51,24 @@ export default function TeamDailyLog() {
         date: dateStr,
         department_code: departmentFilter === "all" ? null : departmentFilter
       });
+      console.log('📊 Team Daily Logs Response:', response.data);
       return response.data;
     },
-    enabled: !!user && (isAdmin || isManager)
+    enabled: !!user && (isAdmin || isManager),
+    staleTime: 0, // 常に最新を取得
+    gcTime: 0, // キャッシュを保持しない
+    refetchOnWindowFocus: true, // ウィンドウフォーカス時に再取得
+    refetchOnMount: 'always' // マウント時に必ず再取得
   });
 
   const users = teamData?.users || [];
+
+  // 日付・フィルタ変更時に強制再取得
+  useEffect(() => {
+    if (user && (isAdmin || isManager)) {
+      refetch();
+    }
+  }, [dateStr, departmentFilter, submitFilter]);
 
   // フィルタリング
   const filteredUsers = useMemo(() => {
@@ -267,7 +279,13 @@ export default function TeamDailyLog() {
                                   </div>
                                 </td>
                                 <td className="py-2 px-2 text-slate-600 text-xs max-w-xs truncate">{entry.description || "-"}</td>
-                                <td className="py-2 px-2 text-right font-mono text-slate-700">{formatTime(entry.duration_minutes)}</td>
+                                <td className="py-2 px-2 text-right font-mono text-slate-700">
+                                  {formatTime(entry.duration_minutes)}
+                                  {/* デバッグ: status表示 */}
+                                  {entry.status && (
+                                    <div className="text-[9px] text-slate-400 mt-0.5">{entry.status}</div>
+                                  )}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -275,8 +293,17 @@ export default function TeamDailyLog() {
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center py-6 text-slate-500">
-                      未提出です
+                    <div className="text-center py-6">
+                      <p className="text-slate-500">未提出です</p>
+                      {/* デバッグ情報 */}
+                      {userData._debug && (
+                        <details className="mt-2 text-xs text-slate-400">
+                          <summary className="cursor-pointer">デバッグ情報</summary>
+                          <pre className="mt-1 text-left bg-slate-800 text-slate-200 p-2 rounded overflow-auto">
+                            {JSON.stringify(userData._debug, null, 2)}
+                          </pre>
+                        </details>
+                      )}
                     </div>
                   )}
                 </AccordionContent>
