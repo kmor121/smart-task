@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
 
     const { client_id } = await req.json().catch(() => ({}));
 
-    console.log('🔍 Fetching all projects...');
+    console.log('🔍 Fetching all projects...', client_id ? `for client: ${client_id}` : '(all)');
 
     // Service role で全案件を取得してから JavaScript で絞り込み
     const allProjects = await base44.asServiceRole.entities.Project.list();
