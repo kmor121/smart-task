@@ -12,7 +12,6 @@ import { Loader2, Plus, Edit2, Archive, AlertTriangle, Trash2 } from "lucide-rea
 import { toast } from "sonner";
 import useCurrentUser from "../components/hooks/useCurrentUser";
 import SeedTestUsersButton from "../components/admin/SeedTestUsersButton";
-import { useQueryClient } from "@tanstack/react-query";
 
 export default function AdminData() {
   const { user, isAdmin } = useCurrentUser();
