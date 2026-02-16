@@ -99,16 +99,21 @@ export default function DebugPanel({ user, isAdmin, isManager, teamData }) {
                 <div>requested_department: {meta.query_info?.requested_department || "null"}</div>
                 <div>
                   impersonate_user_email: 
-                  {meta.effective_user?.is_impersonated ? (
-                    <span className="text-purple-700 font-semibold"> {meta.effective_user.email}</span>
-                  ) : (
-                    <span className="text-slate-400"> (none)</span>
+                  <span className={meta.effective_user?.is_impersonated ? "text-purple-700 font-semibold" : "text-blue-600 font-semibold"}>
+                    {" "}{meta.effective_user?.email || user?.email || "(none)"}
+                  </span>
+                  {meta.effective_user?.is_impersonated && (
+                    <Badge className="ml-2 text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0">impersonating</Badge>
                   )}
                 </div>
                 <div>
                   effective_user_source: 
                   <span className="font-semibold ml-1">
-                    {meta.effective_user?.is_impersonated ? "impersonate" : "auth"}
+                    {meta.effective_user?.is_impersonated ? (
+                      <span className="text-purple-600">impersonate</span>
+                    ) : (
+                      <span className="text-blue-600">frontend</span>
+                    )}
                   </span>
                 </div>
               </div>

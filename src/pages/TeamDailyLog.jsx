@@ -54,13 +54,8 @@ function TeamDailyLogInner({ user, isAdmin, isManager }) {
          department_code: departmentFilter === "all" ? null : departmentFilter
        };
 
-       // sessionStorage から impersonate_user_email を取得（admin のときのみ有効）
-       if (isAdmin) {
-         const impersonateUserEmail = sessionStorage.getItem("impersonate_user_email");
-         if (impersonateUserEmail) {
-           payload.impersonate_user_email = impersonateUserEmail;
-         }
-       }
+       // impersonate_user_email を必ず送る（sessionStorage優先、なければ現在のuser.email）
+       payload.impersonate_user_email = sessionStorage.getItem("impersonate_user_email") || user?.email;
 
        const response = await base44.functions.invoke("getTeamDailyLogs", payload);
        console.log('📊 Team Daily Logs Response:', response.data);
