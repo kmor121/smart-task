@@ -585,11 +585,49 @@ export default function DailyLog() {
               <div>clients_count: {clients.length} {clientsLoading && "⏳"} {(clientsError || !clientsData?.success) && "❌"}</div>
               <div>projects_count: {projects.length} {projectsLoading && "⏳"} {(projectsError || !projectsData?.success) && "❌"}</div>
               <div>work_categories_count: {workCategories.length}</div>
+              
+              {clientsData?._debug && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-blue-600">🔍 Clients Debug</summary>
+                  <div className="ml-2 mt-1 space-y-0.5">
+                    <div>total: {clientsData._debug.total_count}</div>
+                    <div>active: {clientsData._debug.active_count}</div>
+                    {clientsData._debug.sample && (
+                      <div className="text-green-600">sample: {clientsData._debug.sample.name}</div>
+                    )}
+                  </div>
+                </details>
+              )}
+              
+              {projectsData?._debug && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-blue-600">🔍 Projects Debug</summary>
+                  <div className="ml-2 mt-1 space-y-0.5">
+                    <div>total: {projectsData._debug.total_count}</div>
+                    <div>active: {projectsData._debug.active_count}</div>
+                    <div>filtered: {projectsData._debug.filtered_count}</div>
+                    {projectsData._debug.sample && (
+                      <div className="text-green-600">sample: {projectsData._debug.sample.name}</div>
+                    )}
+                  </div>
+                </details>
+              )}
+              
               {(clientsError || !clientsData?.success) && (
-                <div className="text-red-600">clients_error: {clientsData?.error || "不明"}</div>
+                <div className="text-red-600 mt-1">
+                  <div>clients_error: {clientsData?.error || "不明"}</div>
+                  {clientsData?._debug?.error_type && (
+                    <div>error_type: {clientsData._debug.error_type}</div>
+                  )}
+                </div>
               )}
               {(projectsError || !projectsData?.success) && (
-                <div className="text-red-600">projects_error: {projectsData?.error || "不明"}</div>
+                <div className="text-red-600 mt-1">
+                  <div>projects_error: {projectsData?.error || "不明"}</div>
+                  {projectsData?._debug?.error_type && (
+                    <div>error_type: {projectsData._debug.error_type}</div>
+                  )}
+                </div>
               )}
             </div>
           </div>
