@@ -33,9 +33,46 @@ const emptyRow = () => ({
 
 export default function DailyLog() {
   const { user, isSales, canManageProjects } = useCurrentUser();
-  const { clients, projects, workCategories, refreshProjects } = useMasterData();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  // 顧客・案件を backend function 経由で取得
+  const { data: clientsData, error: clientsError, isLoading: clientsLoading } = useQuery({
+    queryKey: ["clients"],
+    queryFn: async () => {
+      const response = await base44.functions.invoke("getClients", {});
+      return response.data;
+    },
+    initialData: { success: true, clients: [], count: 0 },
+  });
+
+  const { data: projectsData, error: projectsError, isLoading: projectsLoading } = useQuery({
+    queryKey: ["projects"],
+    queryFn: async () => {
+      const response = await base44.functions.invoke("getProjects", {});
+      return response.data;
+    },
+    initialData: { success: true, projects: [], count: 0 },
+  });
+
+  const { data: workCategories = [] } = useQuery({
+    queryKey: ["workCategories"],
+    queryFn: () => base44.entities.WorkCategory.list(),
+    initialData: [],
+  });
+
+  const clients = clientsData?.clients || [];
+  const projects = projectsData?.projects || [];
+
+  // エラー表示
+  React.useEffect(() => {
+    if (clientsError || !clientsData?.success) {
+      toast.error(`顧客の取得に失敗しました: ${clientsData?.error || "不明なエラー"}`);
+    }
+    if (projectsError || !projectsData?.success) {
+      toast.error(`案件の取得に失敗しました: ${projectsData?.error || "不明なエラー"}`);
+    }
+  }, [clientsError, projectsError, clientsData, projectsData]);
   
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [newProjectForm, setNewProjectForm] = useState({ client_name: "", project_date: "", project_title: "" });
@@ -234,6 +271,11 @@ export default function DailyLog() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const refreshProjects = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['projects'] });
+    await queryClient.refetchQueries({ queryKey: ['projects'] });
   };
 
   const copyPreviousDay = async () => {
@@ -506,6 +548,50 @@ export default function DailyLog() {
               )}
               {submitting ? "提出中…" : isSubmitted && !hasLocalChanges ? "提出済" : isResubmit ? "再提出" : "提出"}
             </Button>
+          </div>
+
+          {/* Debug Info */}
+          {lastSaveResult && (
+            <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+              <div className="font-semibold text-slate-700 mb-1">📊 保存結果:</div>
+              <div className="space-y-0.5 text-slate-600 font-mono">
+                <div>success: {lastSaveResult.success ? "✅" : "❌"}</div>
+                {lastSaveResult.saved_count !== undefined && (
+                  <div>saved_count: {lastSaveResult.saved_count}</div>
+                )}
+                {lastSaveResult.error && (
+                  <div className="text-red-600">error: {lastSaveResult.error}</div>
+                )}
+                {lastSaveResult._debug && (
+                  <>
+                    <div>work_date: {lastSaveResult._debug.work_date}</div>
+                    <div>user_email: {lastSaveResult._debug.user_email}</div>
+                    <div>department_code: {lastSaveResult._debug.department_code}</div>
+                    {lastSaveResult._debug.is_impersonated && (
+                      <div className="text-purple-600">
+                        impersonate_user_email: {lastSaveResult._debug.impersonate_user_email}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Master Data Info */}
+          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs">
+            <div className="font-semibold text-blue-800 mb-1">📦 マスタデータ:</div>
+            <div className="space-y-0.5 text-blue-700 font-mono">
+              <div>clients_count: {clients.length} {clientsLoading && "⏳"} {(clientsError || !clientsData?.success) && "❌"}</div>
+              <div>projects_count: {projects.length} {projectsLoading && "⏳"} {(projectsError || !projectsData?.success) && "❌"}</div>
+              <div>work_categories_count: {workCategories.length}</div>
+              {(clientsError || !clientsData?.success) && (
+                <div className="text-red-600">clients_error: {clientsData?.error || "不明"}</div>
+              )}
+              {(projectsError || !projectsData?.success) && (
+                <div className="text-red-600">projects_error: {projectsData?.error || "不明"}</div>
+              )}
+            </div>
           </div>
         </>
       )}
