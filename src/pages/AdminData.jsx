@@ -12,6 +12,7 @@ import { Loader2, Plus, Edit2, Archive, AlertTriangle, Trash2 } from "lucide-rea
 import { toast } from "sonner";
 import useCurrentUser from "../components/hooks/useCurrentUser";
 import SeedTestUsersButton from "../components/admin/SeedTestUsersButton";
+import CreateTestDailyLogsButton from "../components/admin/CreateTestDailyLogsButton";
 
 export default function AdminData() {
   const { user, isAdmin } = useCurrentUser();
@@ -149,6 +150,7 @@ export default function AdminData() {
            <TabsTrigger value="clients">顧客管理</TabsTrigger>
            <TabsTrigger value="projects">案件管理</TabsTrigger>
            <TabsTrigger value="seed">テストユーザー作成</TabsTrigger>
+           <TabsTrigger value="testlogs">テスト日報作成</TabsTrigger>
            <TabsTrigger value="reset">データリセット</TabsTrigger>
          </TabsList>
 
@@ -226,23 +228,43 @@ export default function AdminData() {
 
         {/* テストユーザー作成 */}
          <TabsContent value="seed">
-           <Card className="border-blue-200">
-             <CardHeader>
-               <CardTitle className="text-lg">テストユーザー自動作成</CardTitle>
-             </CardHeader>
-             <CardContent className="space-y-4">
-               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                 <p className="text-sm text-blue-800 font-medium mb-2">ℹ️ 説明</p>
-                 <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
-                   <li>制作（design）部署に 6 人のテストユーザーを自動作成します</li>
-                   <li>既存ユーザーは更新されます</li>
-                   <li>作成後は「部署の日報」で確認できます</li>
-                 </ul>
-               </div>
-               <SeedTestUsersButton queryClient={queryClient} />
-             </CardContent>
-           </Card>
-         </TabsContent>
+          <Card className="border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-lg">テストユーザー自動作成</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800 font-medium mb-2">ℹ️ 説明</p>
+                <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                  <li>制作（design）部署に 6 人のテストユーザーを自動作成します</li>
+                  <li>既存ユーザーは更新されます</li>
+                  <li>作成後は「部署の日報」で確認できます</li>
+                </ul>
+              </div>
+              <SeedTestUsersButton queryClient={queryClient} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* テスト日報作成 */}
+        <TabsContent value="testlogs">
+          <Card className="border-purple-200">
+            <CardHeader>
+              <CardTitle className="text-lg">テスト日報自動作成</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <p className="text-sm text-purple-800 font-medium mb-2">ℹ️ 説明</p>
+                <ul className="text-sm text-purple-700 space-y-1 list-disc list-inside">
+                  <li>指定日付・部署の一般ユーザー全員分の日報を自動作成します</li>
+                  <li>作業時間は30分～4時間のランダム、ステータスは「提出済」</li>
+                  <li>作成後は「部署の日報」で確認できます</li>
+                </ul>
+              </div>
+              <CreateTestDailyLogsButton queryClient={queryClient} />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* データリセット */}
          <TabsContent value="reset">

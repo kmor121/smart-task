@@ -55,6 +55,7 @@ export default function DailyLog() {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedRowForNewProject, setSelectedRowForNewProject] = useState(null);
+  const [lastSaveResult, setLastSaveResult] = useState(null);
 
   // 既存のWorkLogsを読み込み
   const { data: existingLogs = [], isLoading } = useQuery({
@@ -305,7 +306,6 @@ export default function DailyLog() {
     }
 
     const isSubmit = submitStatus === "提出済";
-    const isUpdate = existingLogs.length > 0;
 
     if (isSubmit) {
       setSubmitting(true);
@@ -314,48 +314,46 @@ export default function DailyLog() {
     }
 
     try {
-       // ユーザーが Users エンティティに存在することを確認（自動作成）
-       await base44.functions.invoke('ensureUserExists', {
-         user_email: user.email,
-         full_name: user.full_name,
-         department_code: user.department_code || ""
-       });
+      // impersonate_user_email を取得（sessionStorage優先、なければuser.email）
+      const impersonateUserEmail = sessionStorage.getItem("impersonate_user_email") || user.email;
 
-       // 既存レコードを削除
-       for (const log of existingLogs) {
-         await base44.entities.WorkLog.delete(log.id);
-       }
+      // 提出時は submitted_at を付与
+      const rowsToSave = rows
+        .filter(r => r.work_category_id && r.duration_minutes)
+        .map(r => ({
+          ...r,
+          status: submitStatus,
+          submitted_at: submitStatus === "提出済" ? new Date().toISOString() : null
+        }));
 
-       // 新規作成
-      const records = rows.map(r => ({
+      const response = await base44.functions.invoke("saveDailyLog", {
         work_date: dateStr,
-        user_email: user.email,
-        user_name: user.full_name,
-        department_code: user.department_code || "",
-        client_id: r.client_id || null,
-        client_name: r.client_name || "",
-        project_id: r.project_id || null,
-        project_name: r.project_name || "",
-        is_temporary_project: r.is_temporary_project || false,
-        work_category_id: r.work_category_id,
-        work_category_name: r.work_category_name,
-        is_revision: r.is_revision,
-        duration_minutes: r.duration_minutes,
-        description: r.description,
-        status: submitStatus,
-        submitted_at: submitStatus === "提出済" ? new Date().toISOString() : null,
-      }));
+        rows: rowsToSave,
+        impersonate_user_email: impersonateUserEmail
+      });
 
-      await base44.entities.WorkLog.bulkCreate(records);
-      queryClient.invalidateQueries({ queryKey: ["workLogs", dateStr] });
+      const result = response.data;
+      setLastSaveResult(result);
 
-      if (isSubmit) {
-        setShowSuccessModal(true);
+      if (result.success) {
+        queryClient.invalidateQueries({ queryKey: ["workLogs"] });
+        queryClient.invalidateQueries({ queryKey: ["myLogsCount"] });
+        queryClient.invalidateQueries({ queryKey: ["teamDailyLogs"] });
+
+        if (isSubmit) {
+          setShowSuccessModal(true);
+        } else {
+          toast.success(`下書きを保存しました（${result.saved_count}件）`);
+        }
       } else {
-        toast.success("下書きを保存しました");
+        const errorMsg = result.error || "不明なエラー";
+        toast.error(isSubmit ? `提出に失敗しました: ${errorMsg}` : `保存に失敗しました: ${errorMsg}`);
       }
     } catch (e) {
-      toast.error(isSubmit ? "提出できませんでした。もう一度お試しください" : "保存に失敗しました");
+      console.error("Save/Submit error:", e);
+      const errorMsg = e.message || "不明なエラー";
+      toast.error(isSubmit ? `提出できませんでした: ${errorMsg}` : `保存に失敗しました: ${errorMsg}`);
+      setLastSaveResult({ success: false, error: errorMsg });
     } finally {
       if (isSubmit) {
         setSubmitting(false);
