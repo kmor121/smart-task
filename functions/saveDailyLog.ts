@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
+  let payload;
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -9,7 +10,10 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: '認証が必要です' }, { status: 401 });
     }
 
-    const { work_date, rows, impersonate_user_email } = await req.json();
+    payload = await req.json();
+    console.log('📥 Received payload:', JSON.stringify(payload, null, 2));
+    
+    const { work_date, rows, impersonate_user_email } = payload;
 
     if (!work_date || !rows || !Array.isArray(rows)) {
       return Response.json({ 
@@ -45,11 +49,11 @@ Deno.serve(async (req) => {
       is_impersonated: impersonate_user_email ? true : false
     });
 
-    // 既存の日報を取得
-    const existingLogs = await base44.asServiceRole.entities.WorkLog.filter({
-      work_date,
-      user_email: userEmail
-    });
+    // 既存の日報を取得（list→filter に変更）
+    const allLogs = await base44.asServiceRole.entities.WorkLog.list();
+    const existingLogs = allLogs.filter(log => 
+      log.work_date === work_date && log.user_email === userEmail
+    );
 
     console.log('📋 Existing logs:', existingLogs.length);
 
@@ -63,14 +67,20 @@ Deno.serve(async (req) => {
         continue; // 必須項目がない行はスキップ
       }
 
+      // ID フィールドを正規化（空文字列 → null）
+      const normalizeId = (id) => {
+        if (!id || id === "" || id === "null" || id === "_none") return null;
+        return String(id);
+      };
+
       const logData = {
         work_date,
         user_email: userEmail,
         user_name: userName,
         department_code: departmentCode,
-        client_id: row.client_id || '',
+        client_id: normalizeId(row.client_id),
         client_name: row.client_name || '',
-        project_id: row.project_id || '',
+        project_id: normalizeId(row.project_id),
         project_name: row.project_name || '',
         is_temporary_project: row.is_temporary_project || false,
         work_category_id: row.work_category_id,
@@ -78,8 +88,11 @@ Deno.serve(async (req) => {
         is_revision: row.is_revision || false,
         duration_minutes: parseInt(row.duration_minutes) || 0,
         description: row.description || '',
-        status: row.status || '下書き'
+        status: row.status || '下書き',
+        submitted_at: row.submitted_at || null
       };
+      
+      console.log(`💾 Saving row: client_id="${logData.client_id}" project_id="${logData.project_id}" category="${logData.work_category_id}"`);
 
       try {
         let savedLog;
@@ -95,7 +108,16 @@ Deno.serve(async (req) => {
         console.log(`✅ Saved log: ${savedLog.id}`);
       } catch (error) {
         console.error('❌ Failed to save log:', error);
-        errors.push({ row, error: error.message || String(error) });
+        console.error('Error details:', error.stack);
+        errors.push({ 
+          row_data: { 
+            client_id: row.client_id, 
+            project_id: row.project_id,
+            work_category_id: row.work_category_id 
+          }, 
+          error: error.message || String(error),
+          stack: error.stack 
+        });
       }
     }
 
@@ -127,10 +149,17 @@ Deno.serve(async (req) => {
     return Response.json(response);
 
   } catch (error) {
-    console.error('saveDailyLog error:', error);
+    console.error('❌ saveDailyLog error:', error);
+    console.error('Error stack:', error.stack);
     return Response.json({ 
       success: false, 
-      error: error.message || '保存に失敗しました' 
+      error: error.message || '保存に失敗しました',
+      error_stack: error.stack,
+      received_payload: payload,
+      _debug: {
+        error_type: error.constructor.name,
+        error_details: String(error)
+      }
     }, { status: 500 });
   }
 });
