@@ -41,13 +41,13 @@ Deno.serve(async (req) => {
     const isAdmin = user.role === 'admin' || user.isAdmin === true || user.isOwner === true;
     
     if (impersonate_user_email && isAdmin) {
-      const impersonated = await base44.asServiceRole.entities.User.filter({
-        email: impersonate_user_email
-      });
+      console.log(`[${requestId}] 🔍 Looking for impersonated user: ${impersonate_user_email}`);
+      const allUsers = await base44.asServiceRole.entities.User.list();
+      const impersonated = allUsers.filter(u => u.email === impersonate_user_email);
       
       if (impersonated.length > 0) {
         effectiveUser = impersonated[0];
-        console.log(`🎭 Impersonating for save: ${impersonate_user_email}`);
+        console.log(`[${requestId}] 🎭 Impersonating for save: ${impersonate_user_email}`);
       }
     }
 
@@ -63,14 +63,21 @@ Deno.serve(async (req) => {
       is_impersonated: impersonate_user_email ? true : false
     });
 
-    // 既存の日報を取得（list→filter に変更）
-    console.log(`[${requestId}] 🔍 Fetching existing logs...`);
-    const allLogs = await base44.asServiceRole.entities.WorkLog.list();
-    const existingLogs = allLogs.filter(log => 
-      log.work_date === work_date && log.user_email === userEmail
-    );
-
-    console.log(`[${requestId}] 📋 Existing logs:`, existingLogs.length);
+    // 既存の日報を取得（list→JS filter に変更）
+    console.log(`[${requestId}] 🔍 Fetching existing logs for user: ${userEmail}, date: ${work_date}...`);
+    
+    let existingLogs = [];
+    try {
+      const allLogs = await base44.asServiceRole.entities.WorkLog.list();
+      console.log(`[${requestId}] 📊 Total logs fetched: ${allLogs.length}`);
+      existingLogs = allLogs.filter(log => 
+        log.work_date === work_date && log.user_email === userEmail
+      );
+      console.log(`[${requestId}] 📋 Existing logs for this date/user: ${existingLogs.length}`);
+    } catch (error) {
+      console.error(`[${requestId}] ❌ Failed to fetch existing logs:`, error);
+      throw new Error(`既存ログの取得に失敗: ${error.message}`);
+    }
 
     const existingIds = existingLogs.map(log => log.id);
     const savedIds = [];
