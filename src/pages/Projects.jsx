@@ -23,19 +23,17 @@ export default function ProjectsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
 
-  const { data: projects = [], isLoading } = useQuery({
+  const { data: projectsData, isLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
-      // 管理者は全件、営業部は自分の案件のみ表示
-      const isAdmin = user.role === 'admin' || user.isAdmin === true || user.isOwner === true;
-      const filter = isAdmin 
-        ? { is_active: true }
-        : { is_active: true, department_code: 'sales' };
-      const result = await base44.entities.Project.filter(filter, '-created_date');
-      return result;
+      const response = await base44.functions.invoke("getProjects", {});
+      return response.data;
     },
-    enabled: !!user
+    enabled: !!user,
+    initialData: { success: true, projects: [], count: 0 },
   });
+
+  const projects = projectsData?.projects || [];
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
@@ -70,17 +68,18 @@ export default function ProjectsPage() {
     createMutation.mutate(formData);
   };
 
-  const filteredProjects = projects.filter(p => 
+  const filteredProjects = Array.isArray(projects) ? projects.filter(p => 
     p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.client_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) : [];
 
   const statusColors = {
     "見込み": "bg-slate-100 text-slate-700",
     "進行中": "bg-blue-100 text-blue-700",
     "受注": "bg-green-100 text-green-700",
     "失注": "bg-red-100 text-red-700",
-    "完了": "bg-gray-100 text-gray-700"
+    "完了": "bg-gray-100 text-gray-700",
+    "仮案件": "bg-amber-100 text-amber-700"
   };
 
   if (loading || isLoading) {
