@@ -166,8 +166,24 @@ Deno.serve(async (req) => {
     });
 
     step = 'loadExisting';
-    const existingRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
-    const existingLogs = asArray(existingRes).filter(isRecord);
+    let existingLogs = [];
+    let existingLoadError = null;
+    
+    try {
+      // list→JS絞り込みに切り替え（filter が例外を投げる可能性があるため）
+      const allRes = await writer.entities.WorkLog.list('-work_date', 5000);
+      const all = asArray(allRes).filter(isRecord);
+      existingLogs = all.filter(l => 
+        normalizeDate(l.work_date) === work_date && 
+        l.user_email === userEmail
+      );
+      console.log(`✅ Loaded ${existingLogs.length} existing logs for ${work_date} / ${userEmail}`);
+    } catch (e) {
+      const info = getErrorInfo(e);
+      existingLoadError = { message: info.message, stack: info.stack };
+      console.warn(`⚠️ Failed to load existing logs, continuing with create-only mode:`, info.message);
+      existingLogs = [];
+    }
 
     const existingIds = existingLogs
       .map((log) => (typeof log.id === 'string' ? log.id : null))
@@ -223,15 +239,10 @@ Deno.serve(async (req) => {
       try {
         let savedLog;
 
-        if (rowId && existingIds.includes(rowId)) {
-          step = 'update';
-          savedLog = await writer.entities.WorkLog.update(rowId, logData);
-          savedIds.push(rowId);
-        } else {
-          step = 'create';
-          savedLog = await writer.entities.WorkLog.create(logData);
-          if (isRecord(savedLog) && typeof savedLog.id === 'string') savedIds.push(savedLog.id);
-        }
+        // デバッグ優先：update/delete は使わず「常に create」
+        step = 'create';
+        savedLog = await writer.entities.WorkLog.create(logData);
+        if (isRecord(savedLog) && typeof savedLog.id === 'string') savedIds.push(savedLog.id);
 
         console.log(`✅ Saved log: ${isRecord(savedLog) ? savedLog.id : '(no id)'}`);
       } catch (e) {
@@ -279,6 +290,8 @@ Deno.serve(async (req) => {
         rows_in: rowsArr.length,
         rows_parsed: rows.length,
         impersonate_user_email: impersonate_user_email ?? null,
+        existingLoadError: existingLoadError,
+        existing_count: existingLogs.length,
       },
     });
   } catch (e) {
