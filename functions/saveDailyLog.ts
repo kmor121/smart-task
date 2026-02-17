@@ -1,312 +1,254 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// リクエストID生成
-const generateRequestId = () => `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+function parseJsonMaybe(v: any) {
+  if (typeof v === 'string') {
+    try {
+      return JSON.parse(v);
+    } catch {
+      return v;
+    }
+  }
+  return v;
+}
+
+function asArray(v: any): any[] {
+  if (Array.isArray(v)) return v;
+  if (v && Array.isArray(v.items)) return v.items;
+  if (v && Array.isArray(v.data)) return v.data;
+  return [];
+}
+
+function normalizeDate(d: any): string {
+  if (!d) return '';
+  const s = String(d);
+  // "2026-02-17" / "2026-02-17T..." どちらでも先頭10文字に統一
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
+function normalizeBool(v: any): boolean {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v !== 0;
+  if (typeof v === 'string') return ['true', '1', 'yes', 'on'].includes(v.toLowerCase());
+  return false;
+}
+
+function normalizeStatus(raw: any): string {
+  const s = String(raw ?? '').trim();
+  if (!s) return 'draft';
+  if (s.includes('提出')) return 'submitted';
+  if (s.includes('下書')) return 'draft';
+  return s;
+}
 
 Deno.serve(async (req) => {
-  const requestId = generateRequestId();
-  let payload;
-  
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  let step = 'start';
+
   try {
     const base44 = createClientFromRequest(req);
+
+    step = 'auth';
     const user = await base44.auth.me();
-
     if (!user) {
-      return Response.json({ 
-        success: false, 
-        error: '認証が必要です',
-        requestId 
-      }, { status: 401 });
+      return Response.json(
+        { success: false, requestId, step, errorMessage: '認証が必要です' },
+        { status: 200 }
+      );
     }
 
-    // ペイロードを取得・パース（文字列の場合はJSON.parseする）
-    let rawPayload = await req.json();
-    console.log(`[${requestId}] 📥 Raw payload type:`, typeof rawPayload);
-    
-    // 文字列の場合はJSONパース
-    if (typeof rawPayload === "string") {
-      console.log(`[${requestId}] ⚠️ Payload is string, parsing...`);
-      rawPayload = JSON.parse(rawPayload);
-    }
-    
-    payload = rawPayload;
-    console.log(`[${requestId}] 📥 Parsed payload:`, JSON.stringify(payload, null, 2));
-    
-    const { work_date, rows: rowsRaw, impersonate_user_email } = payload;
+    step = 'parseBody';
+    let body: any = await req.json();
+    body = parseJsonMaybe(body);
 
-    if (!work_date) {
-      console.error(`[${requestId}] ❌ Missing work_date`);
-      return Response.json({ 
-        success: false, 
-        error: 'work_date が必要です',
-        requestId,
-        received_payload: payload
-      }, { status: 400 });
+    if (!body || typeof body !== 'object') {
+      return Response.json(
+        { success: false, requestId, step, errorMessage: 'リクエストJSONが不正です', bodyType: typeof body, body },
+        { status: 200 }
+      );
     }
 
-    if (!rowsRaw || !Array.isArray(rowsRaw)) {
-      console.error(`[${requestId}] ❌ Missing or invalid rows`);
-      return Response.json({ 
-        success: false, 
-        error: 'rows（配列）が必要です',
-        requestId,
-        received_payload: payload
-      }, { status: 400 });
+    const work_date = normalizeDate(body.work_date ?? body.log_date ?? body.logDate ?? body.date);
+
+    let rowsRaw: any = body.rows ?? body.items ?? body.entries ?? [];
+    rowsRaw = parseJsonMaybe(rowsRaw);
+
+    const rowsArr: any[] = Array.isArray(rowsRaw) ? rowsRaw : [rowsRaw];
+
+    // ★ここが重要：配列の各要素が string なら JSON.parse して object に戻す
+    const rows = rowsArr
+      .map((r) => parseJsonMaybe(r))
+      .map((r) => (typeof r === 'string' ? parseJsonMaybe(r) : r))
+      .filter((r) => r && typeof r === 'object');
+
+    const impersonate_user_email = body.impersonate_user_email;
+
+    if (!work_date || rows.length === 0) {
+      return Response.json(
+        {
+          success: false,
+          requestId,
+          step: 'validate',
+          errorMessage: 'work_date と rows（配列）が必要です（rows要素はobjectである必要があります）',
+          work_date,
+          rowsRawType: typeof rowsRaw,
+          rows_in: rowsArr.length,
+          rows_parsed: rows.length,
+        },
+        { status: 200 }
+      );
     }
 
-    // 各行が文字列の場合はパース
-    const rows = rowsRaw.map((r, i) => {
-      if (typeof r === "string") {
-        console.log(`[${requestId}] ⚠️ Row ${i} is string, parsing...`);
-        return JSON.parse(r);
-      }
-      return r;
-    });
-    
-    console.log(`[${requestId}] 📋 Normalized rows count: ${rows.length}`);
-    
-    console.log(`[${requestId}] ✅ Validation passed. Processing ${rows.length} rows...`);
+    // service role（書き込み＆管理者検索用）
+    const writer = (base44 as any).asServiceRole ?? base44;
 
-    // Effective user determination
+    step = 'effectiveUser';
     let effectiveUser = user;
     const isAdmin = user.role === 'admin' || user.isAdmin === true || user.isOwner === true;
-    
+
     if (impersonate_user_email && isAdmin) {
-      console.log(`[${requestId}] 🔍 Looking for impersonated user: ${impersonate_user_email}`);
-      const allUsers = await base44.asServiceRole.entities.User.list();
-      const impersonated = allUsers.filter(u => u.email === impersonate_user_email);
-      
+      const impRes = await writer.entities.User.filter({ email: impersonate_user_email });
+      const impersonated = asArray(impRes);
       if (impersonated.length > 0) {
         effectiveUser = impersonated[0];
-        console.log(`[${requestId}] 🎭 Impersonating for save: ${impersonate_user_email}`);
+        console.log(`🎭 Impersonating for save: ${impersonate_user_email}`);
       }
     }
 
     const userEmail = effectiveUser.email;
-    const userName = effectiveUser.full_name || userEmail.split('@')[0];
+    const userName = effectiveUser.full_name || effectiveUser.name || userEmail.split('@')[0];
     const departmentCode = effectiveUser.department_code || null;
 
-    console.log(`[${requestId}] 📝 Saving daily log:`, {
+    console.log('📝 Saving daily log:', {
+      requestId,
       work_date,
       user_email: userEmail,
       department_code: departmentCode,
-      rows_count: rows.length,
-      is_impersonated: impersonate_user_email ? true : false
+      rows_count_in: rowsArr.length,
+      rows_count_parsed: rows.length,
     });
 
-    // 既存ログ取得は一旦スキップ（重複チェック無し、常に create）
-    console.log(`[${requestId}] ⚠️ Skipping existing log check - will create all rows as new`);
+    // 既存ログ（※ここでfilterが不安なら list→JS絞り込みに後で変更可）
+    step = 'loadExisting';
+    const existingRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
+    const existingLogs = asArray(existingRes);
+    const existingIds = existingLogs.map((log: any) => log.id).filter(Boolean);
 
-    const savedIds = [];
-    const errors = [];
+    const savedIds: string[] = [];
+    const errors: any[] = [];
 
-    // ID 正規化関数
-    const normalizeId = (id) => {
-      if (!id || id === "" || id === "null" || id === "_none") return null;
-      if (typeof id === "object" && id !== null) {
-        return id.id ? String(id.id) : (id.value ? String(id.value) : null);
-      }
-      return String(id);
-    };
-
-    // service role 優先で entities にアクセス
-    const client = (base44 as any).asServiceRole ?? base44;
-    const entities = client.entities;
-
-    // entities.WorkLog が存在するかチェック
-    if (!entities || !entities.WorkLog) {
-      console.error(`[${requestId}] ❌ entities.WorkLog is undefined`);
-      console.error(`[${requestId}] Available entities:`, Object.keys(entities || {}));
-      return Response.json({
-        success: false,
-        requestId,
-        step: "entityMissing",
-        error: {
-          message: "entities.WorkLog が見つかりません",
-          available_entities: Object.keys(entities || {})
-        }
-      }, { status: 500 });
-    }
-
-    // 各行を保存（create のみ）
+    step = 'saveRows';
     for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      const step = `create_row_${i}`;
-      
-      try {
-        if (!row.work_category_id || !row.duration_minutes) {
-          console.log(`[${requestId}] [${step}] ⏭️  Skipping (missing required fields)`);
-          errors.push({
-            step,
-            row_index: i,
-            skipped: true,
-            reason: "Missing work_category_id or duration_minutes",
-            row_data: row
-          });
-          continue;
-        }
+      const row: any = rows[i];
 
-        // 提出時のステータスと日時
-        const isSubmission = row.status === '提出済' || payload.submit === true;
+      const workCategoryId =
+        row.work_category_id ?? row.workCategoryId ?? row.work_category ?? row.category_id ?? null;
 
-        // WorkLogスキーマに合わせたペイロード（オブジェクトとして作成）
-        const logData = {
-          work_date: work_date,
-          user_email: userEmail,
-          user_name: userName,
-          department_code: departmentCode,
-          client_id: normalizeId(row.client_id),
-          client_name: row.client_name || '',
-          project_id: normalizeId(row.project_id),
-          project_name: row.project_name || '',
-          is_temporary_project: Boolean(row.is_temporary_project),
-          work_category_id: normalizeId(row.work_category_id),
-          work_category_name: row.work_category_name || '',
-          is_revision: Boolean(row.is_revision),
-          duration_minutes: Number(row.duration_minutes) || 0,
-          description: String(row.description || ''),
-          status: isSubmission ? '提出済' : '下書き',
-          submitted_at: isSubmission ? new Date().toISOString() : null
-        };
-        
-        console.log(`[${requestId}] [${step}] 💾 Creating log with payload (type check):`, {
-          payloadType: typeof logData,
-          isObject: typeof logData === 'object',
-          keys: Object.keys(logData),
-          work_date: logData.work_date,
-          duration_minutes: logData.duration_minutes
-        });
+      const duration = Number(row.duration_minutes ?? row.minutes ?? 0);
 
-        // entities.WorkLog.createにオブジェクトを渡す（絶対にJSON.stringifyしない）
-        const savedLog = await entities.WorkLog.create(logData);
-        savedIds.push(savedLog.id);
-        console.log(`[${requestId}] [${step}] ✅ Created: ${savedLog.id}`);
-      } catch (error) {
-        console.error(`[${requestId}] [${step}] ❌ Failed:`, error.message);
-        console.error(`[${requestId}] [${step}] Full error:`, error);
-        console.error(`[${requestId}] [${step}] Stack:`, error.stack);
-        
-        errors.push({ 
-          step,
-          row_index: i,
-          row_data: row,
-          payloadUsed: {
-            work_date,
-            user_email: userEmail,
-            work_category_id: normalizeId(row.work_category_id),
-            duration_minutes: Number(row.duration_minutes) || 0
-          },
-          error: {
-            message: error.message || String(error),
-            stack: error.stack || '',
-            type: error.constructor?.name || 'Unknown',
-            toString: String(error)
-          }
-        });
+      if (!workCategoryId || !Number.isFinite(duration) || duration <= 0) {
+        continue;
       }
-    }
 
-    // 削除処理はスキップ（既存チェックをしていないため）
-    console.log(`[${requestId}] ⚠️ Skipping deletion (no existing log check)`);
+      const status = normalizeStatus(row.status);
 
-    // 検証用：保存後のデータを確認
-    let verifySample = [];
-    try {
-      const recentLogs = await entities.WorkLog.list("-created_date", 5);
-      verifySample = recentLogs.map(log => ({
-        id: log.id,
-        work_date: log.work_date,
-        user_email: log.user_email,
-        duration_minutes: log.duration_minutes,
-        status: log.status,
-        created_date: log.created_date
-      }));
-      console.log(`[${requestId}] 🔍 Verify sample:`, verifySample);
-    } catch (error) {
-      console.error(`[${requestId}] ⚠️ Failed to fetch verify sample:`, error.message);
-    }
-
-    // 検証用：保存したユーザーの最新データを取得
-    let verifyMineSample = [];
-    let verifyAllSample = [];
-    let saved_this_call = savedIds.length;
-    
-    try {
-      const latest = await entities.WorkLog.list("-created_date", 10);
-      verifyAllSample = latest.map(log => ({
-        id: log.id,
-        work_date: log.work_date,
-        user_email: log.user_email,
-        duration_minutes: log.duration_minutes,
-        status: log.status,
-        created_date: log.created_date
-      }));
-      
-      const mine = latest.filter(r => r.user_email === userEmail);
-      verifyMineSample = mine.slice(0, 3).map(log => ({
-        id: log.id,
-        work_date: log.work_date,
-        user_email: log.user_email,
-        duration_minutes: log.duration_minutes,
-        status: log.status,
-        created_date: log.created_date
-      }));
-      
-      console.log(`[${requestId}] 🔍 Verify all sample (${latest.length} total):`, verifyAllSample);
-      console.log(`[${requestId}] 🔍 Verify mine sample (${mine.length} total):`, verifyMineSample);
-    } catch (error) {
-      console.error(`[${requestId}] ⚠️ Failed to fetch verify sample:`, error.message);
-    }
-
-    // saved_count が 0 なら success: false にする
-    const isSuccess = saved_this_call > 0;
-    
-    console.log(`[${requestId}] ${isSuccess ? '✅' : '❌'} Save complete:`, {
-      created: saved_this_call,
-      errors: errors.length
-    });
-
-    const response = {
-      success: isSuccess,
-      requestId,
-      saved_count: saved_this_call,
-      saved_this_call,
-      deleted_count: 0,
-      created_ids: savedIds,
-      verifyAllSample,
-      verifyMineSample,
-      errors: errors.length > 0 ? errors : undefined,
-      _debug: {
+      const logData: any = {
         work_date,
         user_email: userEmail,
         user_name: userName,
         department_code: departmentCode,
-        is_impersonated: impersonate_user_email ? true : false,
-        impersonate_user_email: impersonate_user_email || null,
-        note: "既存ログチェック無効化中（create のみ）"
+
+        client_id: row.client_id ?? null,
+        client_name: row.client_name ?? null,
+        project_id: row.project_id ?? null,
+        project_name: row.project_name ?? null,
+
+        is_temporary_project: normalizeBool(row.is_temporary_project),
+        work_category_id: String(workCategoryId),
+        work_category_name: row.work_category_name ?? null,
+        is_revision: normalizeBool(row.is_revision),
+
+        duration_minutes: duration,
+        description: row.description ?? row.memo ?? '',
+
+        status,
+        submitted_at: status === 'submitted' ? new Date().toISOString() : null,
+      };
+
+      try {
+        let savedLog: any;
+
+        if (row.id && existingIds.includes(row.id)) {
+          step = 'update';
+          savedLog = await writer.entities.WorkLog.update(row.id, logData);
+          savedIds.push(row.id);
+        } else {
+          step = 'create';
+          savedLog = await writer.entities.WorkLog.create(logData);
+          if (savedLog?.id) savedIds.push(savedLog.id);
+        }
+
+        console.log(`✅ Saved log: ${savedLog?.id ?? '(no id)'}`);
+      } catch (e: any) {
+        console.error('❌ Failed to save log:', e);
+        errors.push({
+          index: i,
+          row_id: row.id ?? `row_${i}`,
+          errorMessage: e?.message ?? String(e),
+          errorStack: e?.stack ?? null,
+          payloadUsed: logData,
+          rowType: typeof row,
+        });
       }
-    };
+    }
 
-    // ステータスコードは常に200で返す（axiosのcatch回避）
-    return Response.json(response, { status: 200 });
+    // まずは削除は無効化（デバッグ中に消えるのを防ぐ）
+    const idsToDelete: string[] = [];
 
-  } catch (error) {
-    const step = "top_level_error";
-    console.error(`[${requestId}] [${step}] ❌ saveDailyLog error:`, error.message);
-    console.error(`[${requestId}] [${step}] Error stack:`, error.stack);
-    console.error(`[${requestId}] [${step}] Received payload:`, JSON.stringify(payload, null, 2));
-    
-    return Response.json({ 
-      success: false,
-      requestId,
-      step,
-      error: {
-        message: error.message || '保存に失敗しました',
-        stack: error.stack,
-        type: error.constructor.name,
-        details: String(error)
+    // ★成功条件：1件以上保存でき、エラー0
+    const savedCount = savedIds.filter(Boolean).length;
+    const success = savedCount > 0 && errors.length === 0;
+
+    // 検証用（同条件で引けるか）
+    step = 'verify';
+    let verifySample: any[] = [];
+    try {
+      const verRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
+      verifySample = asArray(verRes).slice(0, 5);
+    } catch {
+      // ignore
+    }
+
+    return Response.json(
+      {
+        success,
+        requestId,
+        saved_count: savedCount,
+        deleted_count: idsToDelete.length,
+        errors: errors.length ? errors : undefined,
+        verifySample,
+        _debug: {
+          stepEnd: step,
+          work_date,
+          user_email: userEmail,
+          department_code: departmentCode,
+          rows_in: rowsArr.length,
+          rows_parsed: rows.length,
+          impersonate_user_email: impersonate_user_email ?? null,
+        },
       },
-      received_payload: payload
-    }, { status: 500 });
+      { status: 200 }
+    );
+  } catch (e: any) {
+    console.error('saveDailyLog fatal error:', e);
+    return Response.json(
+      {
+        success: false,
+        requestId,
+        step,
+        errorMessage: e?.message ?? String(e),
+        errorStack: e?.stack ?? null,
+      },
+      { status: 200 }
+    );
   }
 });
