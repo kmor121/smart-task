@@ -1,6 +1,6 @@
+// deno-lint-ignore-file no-explicit-any
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// deno-lint-ignore no-explicit-any
 function parseJsonMaybe(v: any) {
   if (typeof v === 'string') {
     try {
@@ -12,7 +12,6 @@ function parseJsonMaybe(v: any) {
   return v;
 }
 
-// deno-lint-ignore no-explicit-any
 function asArray(v: any): any[] {
   if (Array.isArray(v)) return v;
   if (v && Array.isArray(v.items)) return v.items;
@@ -20,14 +19,12 @@ function asArray(v: any): any[] {
   return [];
 }
 
-// deno-lint-ignore no-explicit-any
 function normalizeDate(d: any): string {
   if (!d) return '';
   const s = String(d);
   return s.length >= 10 ? s.slice(0, 10) : s;
 }
 
-// deno-lint-ignore no-explicit-any
 function normalizeBool(v: any): boolean {
   if (typeof v === 'boolean') return v;
   if (typeof v === 'number') return v !== 0;
@@ -35,7 +32,6 @@ function normalizeBool(v: any): boolean {
   return false;
 }
 
-// deno-lint-ignore no-explicit-any
 function normalizeStatus(raw: any): string {
   const s = String(raw ?? '').trim();
   if (!s) return 'draft';
@@ -60,7 +56,6 @@ Deno.serve(async (req: Request) => {
     }
 
     step = 'parseBody';
-    // deno-lint-ignore no-explicit-any
     let body: any = await req.json();
     body = parseJsonMaybe(body);
 
@@ -72,11 +67,9 @@ Deno.serve(async (req: Request) => {
 
     const work_date = normalizeDate(body.work_date ?? body.log_date ?? body.logDate ?? body.date);
 
-    // deno-lint-ignore no-explicit-any
     let rowsRaw: any = body.rows ?? body.items ?? body.entries ?? [];
     rowsRaw = parseJsonMaybe(rowsRaw);
 
-    // deno-lint-ignore no-explicit-any
     const rowsArr: any[] = Array.isArray(rowsRaw) ? rowsRaw : [rowsRaw];
 
     const rows = rowsArr
@@ -99,11 +92,9 @@ Deno.serve(async (req: Request) => {
       }), { status: 200, headers: { 'content-type': 'application/json' } });
     }
 
-    // deno-lint-ignore no-explicit-any
     const writer = (base44 as any).asServiceRole ?? base44;
 
     step = 'effectiveUser';
-    // deno-lint-ignore no-explicit-any
     let effectiveUser: any = user;
     const isAdmin = user.role === 'admin' || user.isAdmin === true || user.isOwner === true;
 
@@ -136,12 +127,10 @@ Deno.serve(async (req: Request) => {
     const existingIds = existingLogs.map((log: any) => log.id).filter(Boolean);
 
     const savedIds: string[] = [];
-    // deno-lint-ignore no-explicit-any
     const errors: any[] = [];
 
     step = 'saveRows';
     for (let i = 0; i < rows.length; i++) {
-      // deno-lint-ignore no-explicit-any
       const row: any = rows[i];
 
       const workCategoryId =
@@ -155,7 +144,6 @@ Deno.serve(async (req: Request) => {
 
       const status = normalizeStatus(row.status);
 
-      // deno-lint-ignore no-explicit-any
       const logData: any = {
         work_date,
         user_email: userEmail,
@@ -180,7 +168,6 @@ Deno.serve(async (req: Request) => {
       };
 
       try {
-        // deno-lint-ignore no-explicit-any
         let savedLog: any;
 
         if (row.id && existingIds.includes(row.id)) {
@@ -196,7 +183,6 @@ Deno.serve(async (req: Request) => {
         console.log(`✅ Saved log: ${savedLog?.id ?? '(no id)'}`);
       } catch (e) {
         console.error('❌ Failed to save log:', e);
-        // deno-lint-ignore no-explicit-any
         const err = e as any;
         errors.push({
           index: i,
@@ -217,7 +203,6 @@ Deno.serve(async (req: Request) => {
     const success = savedCount > 0 && errors.length === 0;
 
     step = 'verify';
-    // deno-lint-ignore no-explicit-any
     let verifySample: any[] = [];
     try {
       const verRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
@@ -245,7 +230,6 @@ Deno.serve(async (req: Request) => {
     }), { status: 200, headers: { 'content-type': 'application/json' } });
   } catch (e) {
     console.error('saveDailyLog fatal error:', e);
-    // deno-lint-ignore no-explicit-any
     const err = e as any;
     return new Response(JSON.stringify({
       success: false,
