@@ -40,7 +40,8 @@ export default function Layout({ children, currentPageName }) {
     queryKey: ["myLogsCount", user?.email],
     queryFn: async () => {
       if (!user?.email) return [];
-      return await base44.entities.WorkLog.filter({ user_email: user.email });
+      const allLogs = await base44.entities.WorkLog.list('-created_date', 5000);
+      return allLogs.filter((l) => l.user_email === user.email);
     },
     enabled: !!user?.email,
   });
