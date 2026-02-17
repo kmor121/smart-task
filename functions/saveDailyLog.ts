@@ -19,20 +19,51 @@ Deno.serve(async (req) => {
       }, { status: 401 });
     }
 
-    payload = await req.json();
-    console.log(`[${requestId}] 📥 Received payload:`, JSON.stringify(payload, null, 2));
+    // ペイロードを取得・パース（文字列の場合はJSON.parseする）
+    let rawPayload = await req.json();
+    console.log(`[${requestId}] 📥 Raw payload type:`, typeof rawPayload);
     
-    const { work_date, rows, impersonate_user_email } = payload;
+    // 文字列の場合はJSONパース
+    if (typeof rawPayload === "string") {
+      console.log(`[${requestId}] ⚠️ Payload is string, parsing...`);
+      rawPayload = JSON.parse(rawPayload);
+    }
+    
+    payload = rawPayload;
+    console.log(`[${requestId}] 📥 Parsed payload:`, JSON.stringify(payload, null, 2));
+    
+    const { work_date, rows: rowsRaw, impersonate_user_email } = payload;
 
-    if (!work_date || !rows || !Array.isArray(rows)) {
-      console.error(`[${requestId}] ❌ Missing required fields`);
+    if (!work_date) {
+      console.error(`[${requestId}] ❌ Missing work_date`);
       return Response.json({ 
         success: false, 
-        error: 'work_date と rows（配列）が必要です',
+        error: 'work_date が必要です',
         requestId,
         received_payload: payload
       }, { status: 400 });
     }
+
+    if (!rowsRaw || !Array.isArray(rowsRaw)) {
+      console.error(`[${requestId}] ❌ Missing or invalid rows`);
+      return Response.json({ 
+        success: false, 
+        error: 'rows（配列）が必要です',
+        requestId,
+        received_payload: payload
+      }, { status: 400 });
+    }
+
+    // 各行が文字列の場合はパース
+    const rows = rowsRaw.map((r, i) => {
+      if (typeof r === "string") {
+        console.log(`[${requestId}] ⚠️ Row ${i} is string, parsing...`);
+        return JSON.parse(r);
+      }
+      return r;
+    });
+    
+    console.log(`[${requestId}] 📋 Normalized rows count: ${rows.length}`);
     
     console.log(`[${requestId}] ✅ Validation passed. Processing ${rows.length} rows...`);
 
@@ -117,10 +148,10 @@ Deno.serve(async (req) => {
 
         // 提出時のステータスと日時
         const isSubmission = row.status === '提出済' || payload.submit === true;
-        const now = new Date().toISOString();
 
+        // WorkLogスキーマに合わせたペイロード（オブジェクトとして作成）
         const logData = {
-          work_date,
+          work_date: work_date,
           user_email: userEmail,
           user_name: userName,
           department_code: departmentCode,
@@ -128,19 +159,25 @@ Deno.serve(async (req) => {
           client_name: row.client_name || '',
           project_id: normalizeId(row.project_id),
           project_name: row.project_name || '',
-          is_temporary_project: row.is_temporary_project === true,
+          is_temporary_project: Boolean(row.is_temporary_project),
           work_category_id: normalizeId(row.work_category_id),
           work_category_name: row.work_category_name || '',
-          is_revision: row.is_revision === true,
+          is_revision: Boolean(row.is_revision),
           duration_minutes: Number(row.duration_minutes) || 0,
-          description: row.description || '',
+          description: String(row.description || ''),
           status: isSubmission ? '提出済' : '下書き',
-          submitted_at: isSubmission ? now : null
+          submitted_at: isSubmission ? new Date().toISOString() : null
         };
         
-        console.log(`[${requestId}] [${step}] 💾 Creating new log with payload:`, JSON.stringify(logData, null, 2));
+        console.log(`[${requestId}] [${step}] 💾 Creating log with payload (type check):`, {
+          payloadType: typeof logData,
+          isObject: typeof logData === 'object',
+          keys: Object.keys(logData),
+          work_date: logData.work_date,
+          duration_minutes: logData.duration_minutes
+        });
 
-        // 常に新規作成（重複チェック無し）
+        // entities.WorkLog.createにオブジェクトを渡す（絶対にJSON.stringifyしない）
         const savedLog = await entities.WorkLog.create(logData);
         savedIds.push(savedLog.id);
         console.log(`[${requestId}] [${step}] ✅ Created: ${savedLog.id}`);
