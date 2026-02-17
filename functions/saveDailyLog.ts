@@ -247,13 +247,21 @@ Deno.serve(async (req) => {
         console.log(`✅ Saved log: ${isRecord(savedLog) ? savedLog.id : '(no id)'}`);
       } catch (e) {
         const err = e instanceof Error ? e : null;
-        console.error('❌ Failed to save log:', err?.message ?? String(e));
+        const errorMsg = err?.message ?? String(e);
+        console.error('❌ Failed to save log:', errorMsg);
 
         errors.push({
-          row: { ...(row ?? {}), id: row?.id ?? `create_row_${i}` },
-          error: err?.message ?? String(e),
-          stack: err?.stack ?? null,
-          data: logData
+          index: i,
+          row_index: i,
+          row_no: i,
+          rowId: rowId ?? `create_row_${i}`,
+          step: step,
+          error: { message: errorMsg, stack: err?.stack ?? null },
+          message: errorMsg,
+          errorMessage: errorMsg,
+          row_data: logData,
+          row: row,
+          payload: logData
         });
       }
     }
@@ -278,7 +286,8 @@ Deno.serve(async (req) => {
       requestId,
       saved_count: savedCount,
       deleted_count: idsToDelete.length,
-      errors: errors.length ? errors : undefined,
+      errors: errors.length > 0 ? errors : [],
+      error: !success ? `保存中にエラーが発生しました（${errors.length}件）` : undefined,
       verifySample,
       _debug: {
         stepEnd: step,
