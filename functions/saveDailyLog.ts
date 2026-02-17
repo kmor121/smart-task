@@ -17,6 +17,7 @@ function asArray(v) {
   if (Array.isArray(v)) return v;
   if (isObj(v) && Array.isArray(v.items)) return v.items;
   if (isObj(v) && Array.isArray(v.data)) return v.data;
+  if (isObj(v) && Array.isArray(v.results)) return v.results; // 念のため
   return [];
 }
 
@@ -88,7 +89,13 @@ Deno.serve(async (req) => {
       body = null;
     }
     if (!isObj(body)) {
-      return json({ success: false, requestId, step, error: "リクエストJSONが不正です", bodyType: typeof body });
+      return json({
+        success: false,
+        requestId,
+        step,
+        error: "リクエストJSONが不正です",
+        bodyType: typeof body,
+      });
     }
 
     const work_date = normalizeDate(body.work_date ?? body.date ?? body.log_date ?? body.logDate);
@@ -100,13 +107,18 @@ Deno.serve(async (req) => {
     const rows = rowsArr
       .map((r) => {
         if (typeof r === "string") {
-          try { return JSON.parse(r); } catch { return null; }
+          try {
+            return JSON.parse(r);
+          } catch {
+            return null;
+          }
         }
         return r;
       })
       .filter(isObj);
 
-    const impersonate_user_email = typeof body.impersonate_user_email === "string" ? body.impersonate_user_email : null;
+    const impersonate_user_email =
+      typeof body.impersonate_user_email === "string" ? body.impersonate_user_email : null;
 
     if (!work_date || rows.length === 0) {
       return json({
@@ -138,17 +150,29 @@ Deno.serve(async (req) => {
     }
 
     const userEmail = effectiveUser.email;
-    const userName = effectiveUser.full_name || effectiveUser.name || String(userEmail).split("@")[0];
+    const userName =
+      effectiveUser.full_name || effectiveUser.name || String(userEmail).split("@")[0];
     const departmentCode = effectiveUser.department_code || "";
 
     // 既存取得（list + JS絞り込み）
     step = "loadExisting";
     let existingIds = [];
     let existingLoadError = null;
+
     try {
-      const allLogs = await writer.entities.WorkLog.list('-created_date', 5000);
-      const existingLogs = asArray(allLogs).filter((l) => 
-        l && l.work_date === work_date && l.user_email === userEmail
+      // ★ここが修正点：文字列引数を渡さない（dict/objectで渡す or 引数なし）
+      let allRes;
+      try {
+        // まずは「オブジェクト引数」を試す（サーバ側がdict前提のため）
+        allRes = await writer.entities.WorkLog.list({ sort: "-created_date", limit: 5000 });
+      } catch (e1) {
+        // ダメなら引数なしで取得（確実にdict|strエラーを避ける）
+        allRes = await writer.entities.WorkLog.list();
+      }
+
+      const allArr = asArray(allRes);
+      const existingLogs = allArr.filter(
+        (l) => l && l.work_date === work_date && l.user_email === userEmail
       );
       existingIds = existingLogs.map((l) => l?.id).filter((id) => typeof id === "string");
     } catch (e) {
@@ -193,7 +217,12 @@ Deno.serve(async (req) => {
         is_revision: normalizeBool(row.is_revision),
 
         duration_minutes: duration,
-        description: typeof row.description === "string" ? row.description : (typeof row.memo === "string" ? row.memo : ""),
+        description:
+          typeof row.description === "string"
+            ? row.description
+            : typeof row.memo === "string"
+              ? row.memo
+              : "",
 
         // ★必ず日本語の値に寄せる
         status,
