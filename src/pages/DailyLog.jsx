@@ -313,8 +313,11 @@ export default function DailyLog() {
 
       const latestLog = prevLogs[0];
 
+      // projects を配列化してから filter（projects.filter is not a function 対策）
+      const projectsArr = Array.isArray(projects) ? projects : (projects?.projects ?? []);
+      
       // Project と WorkCategory の is_active をチェック
-      const project = projects.find(p => p.id === latestLog.project_id);
+      const project = projectsArr.find(p => p.id === latestLog.project_id);
       const category = workCategories.find(c => c.id === latestLog.work_category_id);
 
       // 最初の行に work_category_id と project_id をセット
@@ -342,6 +345,14 @@ export default function DailyLog() {
     } catch (error) {
       console.error("Failed to copy previous log:", error);
     }
+  };
+
+  // ID 正規化ヘルパー
+  const idOf = (value) => {
+    if (!value) return "";
+    if (typeof value === "string") return value;
+    if (typeof value === "object") return value.id || value.value || "";
+    return String(value);
   };
 
   const saveWorkLogs = async (submitStatus) => {
@@ -376,20 +387,34 @@ export default function DailyLog() {
       // impersonate_user_email を取得（sessionStorage優先、なければuser.email）
       const impersonateUserEmail = sessionStorage.getItem("impersonate_user_email") || user.email;
 
-      // 提出時は submitted_at を付与
+      // 提出時は submitted_at を付与し、ID を正規化
       const rowsToSave = rows
         .filter(r => r.work_category_id && r.duration_minutes)
         .map(r => ({
-          ...r,
+          id: r.id,
+          client_id: idOf(r.client_id) || null,
+          client_name: r.client_name || "",
+          project_id: idOf(r.project_id) || null,
+          project_name: r.project_name || "",
+          is_temporary_project: r.is_temporary_project || false,
+          work_category_id: idOf(r.work_category_id),
+          work_category_name: r.work_category_name || "",
+          is_revision: r.is_revision || false,
+          duration_minutes: Number(r.duration_minutes) || 0,
+          description: r.description || "",
           status: submitStatus,
           submitted_at: submitStatus === "提出済" ? new Date().toISOString() : null
         }));
 
-      const response = await base44.functions.invoke("saveDailyLog", {
+      const payload = {
         work_date: dateStr,
         rows: rowsToSave,
         impersonate_user_email: impersonateUserEmail
-      });
+      };
+
+      console.log("📤 Sending payload to saveDailyLog:", JSON.stringify(payload, null, 2));
+
+      const response = await base44.functions.invoke("saveDailyLog", payload);
 
       const result = response.data;
       setLastSaveResult(result);
@@ -409,10 +434,21 @@ export default function DailyLog() {
         toast.error(isSubmit ? `提出に失敗しました: ${errorMsg}` : `保存に失敗しました: ${errorMsg}`);
       }
     } catch (e) {
-      console.error("Save/Submit error:", e);
-      const errorMsg = e.message || "不明なエラー";
-      toast.error(isSubmit ? `提出できませんでした: ${errorMsg}` : `保存に失敗しました: ${errorMsg}`);
-      setLastSaveResult({ success: false, error: errorMsg });
+      console.error("❌ Save/Submit error:", e);
+      const backendError = e.response?.data;
+      const errorMsg = backendError?.error || e.message || "不明なエラー";
+      const errorDetails = backendError ? JSON.stringify(backendError, null, 2) : e.message;
+      
+      console.error("Backend error details:", errorDetails);
+      toast.error(isSubmit ? `提出に失敗しました: ${errorMsg}` : `保存に失敗しました: ${errorMsg}`);
+      
+      setLastSaveResult({ 
+        success: false, 
+        error: errorMsg,
+        error_stack: backendError?.error_stack,
+        received_payload: backendError?.received_payload,
+        _debug: backendError?._debug
+      });
     } finally {
       if (isSubmit) {
         setSubmitting(false);
@@ -578,6 +614,12 @@ export default function DailyLog() {
                 )}
                 {lastSaveResult.error && (
                   <div className="text-red-600">error: {lastSaveResult.error}</div>
+                )}
+                {lastSaveResult.error_stack && (
+                  <details className="text-red-600 mt-1">
+                    <summary className="cursor-pointer">スタックトレース</summary>
+                    <pre className="text-[10px] whitespace-pre-wrap mt-1">{lastSaveResult.error_stack}</pre>
+                  </details>
                 )}
                 {lastSaveResult._debug && (
                   <>

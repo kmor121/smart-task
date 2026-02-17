@@ -1,26 +1,40 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// リクエストID生成
+const generateRequestId = () => `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
 Deno.serve(async (req) => {
+  const requestId = generateRequestId();
   let payload;
+  
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
     if (!user) {
-      return Response.json({ success: false, error: '認証が必要です' }, { status: 401 });
+      return Response.json({ 
+        success: false, 
+        error: '認証が必要です',
+        requestId 
+      }, { status: 401 });
     }
 
     payload = await req.json();
-    console.log('📥 Received payload:', JSON.stringify(payload, null, 2));
+    console.log(`[${requestId}] 📥 Received payload:`, JSON.stringify(payload, null, 2));
     
     const { work_date, rows, impersonate_user_email } = payload;
 
     if (!work_date || !rows || !Array.isArray(rows)) {
+      console.error(`[${requestId}] ❌ Missing required fields`);
       return Response.json({ 
         success: false, 
-        error: 'work_date と rows（配列）が必要です' 
+        error: 'work_date と rows（配列）が必要です',
+        requestId,
+        received_payload: payload
       }, { status: 400 });
     }
+    
+    console.log(`[${requestId}] ✅ Validation passed. Processing ${rows.length} rows...`);
 
     // Effective user determination
     let effectiveUser = user;
@@ -41,7 +55,7 @@ Deno.serve(async (req) => {
     const userName = effectiveUser.full_name || userEmail.split('@')[0];
     const departmentCode = effectiveUser.department_code || '';
 
-    console.log('📝 Saving daily log:', {
+    console.log(`[${requestId}] 📝 Saving daily log:`, {
       work_date,
       user_email: userEmail,
       department_code: departmentCode,
@@ -50,20 +64,24 @@ Deno.serve(async (req) => {
     });
 
     // 既存の日報を取得（list→filter に変更）
+    console.log(`[${requestId}] 🔍 Fetching existing logs...`);
     const allLogs = await base44.asServiceRole.entities.WorkLog.list();
     const existingLogs = allLogs.filter(log => 
       log.work_date === work_date && log.user_email === userEmail
     );
 
-    console.log('📋 Existing logs:', existingLogs.length);
+    console.log(`[${requestId}] 📋 Existing logs:`, existingLogs.length);
 
     const existingIds = existingLogs.map(log => log.id);
     const savedIds = [];
     const errors = [];
 
     // 各行を保存
-    for (const row of rows) {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      
       if (!row.work_category_id || !row.duration_minutes) {
+        console.log(`[${requestId}] ⏭️  Skipping row ${i} (missing required fields)`);
         continue; // 必須項目がない行はスキップ
       }
 
@@ -92,28 +110,38 @@ Deno.serve(async (req) => {
         submitted_at: row.submitted_at || null
       };
       
-      console.log(`💾 Saving row: client_id="${logData.client_id}" project_id="${logData.project_id}" category="${logData.work_category_id}"`);
+      console.log(`[${requestId}] 💾 Saving row ${i}:`, {
+        client_id: logData.client_id,
+        project_id: logData.project_id,
+        work_category_id: logData.work_category_id,
+        duration_minutes: logData.duration_minutes
+      });
 
       try {
         let savedLog;
         if (row.id && existingIds.includes(row.id)) {
           // 既存ログを更新
+          console.log(`[${requestId}] 🔄 Updating log ${row.id}...`);
           savedLog = await base44.asServiceRole.entities.WorkLog.update(row.id, logData);
           savedIds.push(row.id);
+          console.log(`[${requestId}] ✅ Updated log: ${savedLog.id}`);
         } else {
           // 新規作成
+          console.log(`[${requestId}] 🆕 Creating new log...`);
           savedLog = await base44.asServiceRole.entities.WorkLog.create(logData);
           savedIds.push(savedLog.id);
+          console.log(`[${requestId}] ✅ Created log: ${savedLog.id}`);
         }
-        console.log(`✅ Saved log: ${savedLog.id}`);
       } catch (error) {
-        console.error('❌ Failed to save log:', error);
-        console.error('Error details:', error.stack);
+        console.error(`[${requestId}] ❌ Failed to save row ${i}:`, error);
+        console.error(`[${requestId}] Error stack:`, error.stack);
         errors.push({ 
+          row_index: i,
           row_data: { 
             client_id: row.client_id, 
             project_id: row.project_id,
-            work_category_id: row.work_category_id 
+            work_category_id: row.work_category_id,
+            duration_minutes: row.duration_minutes
           }, 
           error: error.message || String(error),
           stack: error.stack 
@@ -123,17 +151,25 @@ Deno.serve(async (req) => {
 
     // 削除された行（既存にあるが今回の保存対象にない）を削除
     const idsToDelete = existingIds.filter(id => !savedIds.includes(id));
+    console.log(`[${requestId}] 🗑️  Deleting ${idsToDelete.length} logs...`);
     for (const id of idsToDelete) {
       try {
         await base44.asServiceRole.entities.WorkLog.delete(id);
-        console.log(`🗑️ Deleted log: ${id}`);
+        console.log(`[${requestId}] ✅ Deleted log: ${id}`);
       } catch (error) {
-        console.error(`❌ Failed to delete log ${id}:`, error);
+        console.error(`[${requestId}] ❌ Failed to delete log ${id}:`, error);
       }
     }
 
+    console.log(`[${requestId}] ✅ Save complete:`, {
+      saved: savedIds.length,
+      deleted: idsToDelete.length,
+      errors: errors.length
+    });
+
     const response = {
       success: true,
+      requestId,
       saved_count: savedIds.length,
       deleted_count: idsToDelete.length,
       errors: errors.length > 0 ? errors : undefined,
@@ -149,10 +185,11 @@ Deno.serve(async (req) => {
     return Response.json(response);
 
   } catch (error) {
-    console.error('❌ saveDailyLog error:', error);
-    console.error('Error stack:', error.stack);
+    console.error(`[${requestId}] ❌ saveDailyLog error:`, error);
+    console.error(`[${requestId}] Error stack:`, error.stack);
     return Response.json({ 
-      success: false, 
+      success: false,
+      requestId,
       error: error.message || '保存に失敗しました',
       error_stack: error.stack,
       received_payload: payload,
