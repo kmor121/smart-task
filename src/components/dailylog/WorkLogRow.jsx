@@ -133,11 +133,10 @@ export default function WorkLogRow({
           <Select 
             value={row.client_id || ""} 
             onValueChange={v => {
-              const clientId = v === "" ? null : v;
-              handleChange("client_id", clientId);
+              handleChange("client_id", v || "");
             }}
           >
-            <SelectTrigger className="h-9 text-sm">
+            <SelectTrigger className={`h-9 text-sm ${isClientInvalid ? "border-red-300 bg-red-50" : ""}`}>
               <SelectValue placeholder="顧客を選択" />
             </SelectTrigger>
             <SelectContent>
