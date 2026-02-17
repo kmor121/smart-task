@@ -27,7 +27,8 @@ Deno.serve(async (req) => {
       req.method === "POST" ? await req.json().catch(() => ({})) : {};
     const client_id = body?.client_id;
 
-    const allProjects = await base44.asServiceRole.entities.Project.list();
+    const allProjects = await base44.entities.Project.list();
+
 
     // Project に is_active が無い可能性が高いので「false以外＝有効」で扱う
     let activeProjects = allProjects.filter((p) => p.is_active !== false);
