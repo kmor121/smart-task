@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// deno-lint-ignore no-explicit-any
 function parseJsonMaybe(v: any) {
   if (typeof v === 'string') {
     try {
@@ -11,6 +12,7 @@ function parseJsonMaybe(v: any) {
   return v;
 }
 
+// deno-lint-ignore no-explicit-any
 function asArray(v: any): any[] {
   if (Array.isArray(v)) return v;
   if (v && Array.isArray(v.items)) return v.items;
@@ -18,13 +20,14 @@ function asArray(v: any): any[] {
   return [];
 }
 
+// deno-lint-ignore no-explicit-any
 function normalizeDate(d: any): string {
   if (!d) return '';
   const s = String(d);
-  // "2026-02-17" / "2026-02-17T..." どちらでも先頭10文字に統一
   return s.length >= 10 ? s.slice(0, 10) : s;
 }
 
+// deno-lint-ignore no-explicit-any
 function normalizeBool(v: any): boolean {
   if (typeof v === 'boolean') return v;
   if (typeof v === 'number') return v !== 0;
@@ -32,6 +35,7 @@ function normalizeBool(v: any): boolean {
   return false;
 }
 
+// deno-lint-ignore no-explicit-any
 function normalizeStatus(raw: any): string {
   const s = String(raw ?? '').trim();
   if (!s) return 'draft';
@@ -40,7 +44,7 @@ function normalizeStatus(raw: any): string {
   return s;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   let step = 'start';
 
@@ -50,31 +54,31 @@ Deno.serve(async (req) => {
     step = 'auth';
     const user = await base44.auth.me();
     if (!user) {
-      return Response.json(
-        { success: false, requestId, step, errorMessage: '認証が必要です' },
-        { status: 200 }
-      );
+      return new Response(JSON.stringify(
+        { success: false, requestId, step, errorMessage: '認証が必要です' }
+      ), { status: 200, headers: { 'content-type': 'application/json' } });
     }
 
     step = 'parseBody';
+    // deno-lint-ignore no-explicit-any
     let body: any = await req.json();
     body = parseJsonMaybe(body);
 
     if (!body || typeof body !== 'object') {
-      return Response.json(
-        { success: false, requestId, step, errorMessage: 'リクエストJSONが不正です', bodyType: typeof body, body },
-        { status: 200 }
-      );
+      return new Response(JSON.stringify(
+        { success: false, requestId, step, errorMessage: 'リクエストJSONが不正です', bodyType: typeof body, body }
+      ), { status: 200, headers: { 'content-type': 'application/json' } });
     }
 
     const work_date = normalizeDate(body.work_date ?? body.log_date ?? body.logDate ?? body.date);
 
+    // deno-lint-ignore no-explicit-any
     let rowsRaw: any = body.rows ?? body.items ?? body.entries ?? [];
     rowsRaw = parseJsonMaybe(rowsRaw);
 
+    // deno-lint-ignore no-explicit-any
     const rowsArr: any[] = Array.isArray(rowsRaw) ? rowsRaw : [rowsRaw];
 
-    // ★ここが重要：配列の各要素が string なら JSON.parse して object に戻す
     const rows = rowsArr
       .map((r) => parseJsonMaybe(r))
       .map((r) => (typeof r === 'string' ? parseJsonMaybe(r) : r))
@@ -83,26 +87,24 @@ Deno.serve(async (req) => {
     const impersonate_user_email = body.impersonate_user_email;
 
     if (!work_date || rows.length === 0) {
-      return Response.json(
-        {
-          success: false,
-          requestId,
-          step: 'validate',
-          errorMessage: 'work_date と rows（配列）が必要です（rows要素はobjectである必要があります）',
-          work_date,
-          rowsRawType: typeof rowsRaw,
-          rows_in: rowsArr.length,
-          rows_parsed: rows.length,
-        },
-        { status: 200 }
-      );
+      return new Response(JSON.stringify({
+        success: false,
+        requestId,
+        step: 'validate',
+        errorMessage: 'work_date と rows（配列）が必要です（rows要素はobjectである必要があります）',
+        work_date,
+        rowsRawType: typeof rowsRaw,
+        rows_in: rowsArr.length,
+        rows_parsed: rows.length,
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
     }
 
-    // service role（書き込み＆管理者検索用）
+    // deno-lint-ignore no-explicit-any
     const writer = (base44 as any).asServiceRole ?? base44;
 
     step = 'effectiveUser';
-    let effectiveUser = user;
+    // deno-lint-ignore no-explicit-any
+    let effectiveUser: any = user;
     const isAdmin = user.role === 'admin' || user.isAdmin === true || user.isOwner === true;
 
     if (impersonate_user_email && isAdmin) {
@@ -134,10 +136,12 @@ Deno.serve(async (req) => {
     const existingIds = existingLogs.map((log: any) => log.id).filter(Boolean);
 
     const savedIds: string[] = [];
+    // deno-lint-ignore no-explicit-any
     const errors: any[] = [];
 
     step = 'saveRows';
     for (let i = 0; i < rows.length; i++) {
+      // deno-lint-ignore no-explicit-any
       const row: any = rows[i];
 
       const workCategoryId =
@@ -151,6 +155,7 @@ Deno.serve(async (req) => {
 
       const status = normalizeStatus(row.status);
 
+      // deno-lint-ignore no-explicit-any
       const logData: any = {
         work_date,
         user_email: userEmail,
@@ -175,6 +180,7 @@ Deno.serve(async (req) => {
       };
 
       try {
+        // deno-lint-ignore no-explicit-any
         let savedLog: any;
 
         if (row.id && existingIds.includes(row.id)) {
@@ -188,13 +194,15 @@ Deno.serve(async (req) => {
         }
 
         console.log(`✅ Saved log: ${savedLog?.id ?? '(no id)'}`);
-      } catch (e: any) {
+      } catch (e) {
         console.error('❌ Failed to save log:', e);
+        // deno-lint-ignore no-explicit-any
+        const err = e as any;
         errors.push({
           index: i,
           row_id: row.id ?? `row_${i}`,
-          errorMessage: e?.message ?? String(e),
-          errorStack: e?.stack ?? null,
+          errorMessage: err?.message ?? String(e),
+          errorStack: err?.stack ?? null,
           payloadUsed: logData,
           rowType: typeof row,
         });
@@ -208,8 +216,8 @@ Deno.serve(async (req) => {
     const savedCount = savedIds.filter(Boolean).length;
     const success = savedCount > 0 && errors.length === 0;
 
-    // 検証用（同条件で引けるか）
     step = 'verify';
+    // deno-lint-ignore no-explicit-any
     let verifySample: any[] = [];
     try {
       const verRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
@@ -218,37 +226,33 @@ Deno.serve(async (req) => {
       // ignore
     }
 
-    return Response.json(
-      {
-        success,
-        requestId,
-        saved_count: savedCount,
-        deleted_count: idsToDelete.length,
-        errors: errors.length ? errors : undefined,
-        verifySample,
-        _debug: {
-          stepEnd: step,
-          work_date,
-          user_email: userEmail,
-          department_code: departmentCode,
-          rows_in: rowsArr.length,
-          rows_parsed: rows.length,
-          impersonate_user_email: impersonate_user_email ?? null,
-        },
+    return new Response(JSON.stringify({
+      success,
+      requestId,
+      saved_count: savedCount,
+      deleted_count: idsToDelete.length,
+      errors: errors.length ? errors : undefined,
+      verifySample,
+      _debug: {
+        stepEnd: step,
+        work_date,
+        user_email: userEmail,
+        department_code: departmentCode,
+        rows_in: rowsArr.length,
+        rows_parsed: rows.length,
+        impersonate_user_email: impersonate_user_email ?? null,
       },
-      { status: 200 }
-    );
-  } catch (e: any) {
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
+  } catch (e) {
     console.error('saveDailyLog fatal error:', e);
-    return Response.json(
-      {
-        success: false,
-        requestId,
-        step,
-        errorMessage: e?.message ?? String(e),
-        errorStack: e?.stack ?? null,
-      },
-      { status: 200 }
-    );
+    // deno-lint-ignore no-explicit-any
+    const err = e as any;
+    return new Response(JSON.stringify({
+      success: false,
+      requestId,
+      step,
+      errorMessage: err?.message ?? String(e),
+      errorStack: err?.stack ?? null,
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
   }
 });
