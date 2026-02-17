@@ -23,9 +23,13 @@ export default function MyLogs() {
   const { data: workLogs = [], isLoading } = useQuery({
     queryKey: ["myWorkLogs", user?.email],
     queryFn: async () => {
-      const logs = await base44.entities.WorkLog.filter({ user_email: user.email });
+      // list()で全件取得→JSで絞り込み（filter()のエラー回避）
+      const allLogs = await base44.entities.WorkLog.list("-created_date", 5000);
       const thirtyDaysAgo = format(subDays(new Date(), 30), "yyyy-MM-dd");
-      return logs.filter(log => log.work_date >= thirtyDaysAgo);
+      return allLogs.filter(log => 
+        log.user_email === user.email && 
+        log.work_date >= thirtyDaysAgo
+      );
     },
     enabled: !!user?.email,
   });

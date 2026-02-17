@@ -161,6 +161,23 @@ Deno.serve(async (req) => {
     // 削除処理はスキップ（既存チェックをしていないため）
     console.log(`[${requestId}] ⚠️ Skipping deletion (no existing log check)`);
 
+    // 検証用：保存後のデータを確認
+    let verifySample = [];
+    try {
+      const recentLogs = await entities.WorkLog.list("-created_date", 5);
+      verifySample = recentLogs.map(log => ({
+        id: log.id,
+        work_date: log.work_date,
+        user_email: log.user_email,
+        duration_minutes: log.duration_minutes,
+        status: log.status,
+        created_date: log.created_date
+      }));
+      console.log(`[${requestId}] 🔍 Verify sample:`, verifySample);
+    } catch (error) {
+      console.error(`[${requestId}] ⚠️ Failed to fetch verify sample:`, error.message);
+    }
+
     console.log(`[${requestId}] ✅ Save complete:`, {
       created: savedIds.length,
       errors: errors.length
@@ -171,6 +188,8 @@ Deno.serve(async (req) => {
       requestId,
       saved_count: savedIds.length,
       deleted_count: 0,
+      created_ids: savedIds,
+      verifySample,
       errors: errors.length > 0 ? errors : undefined,
       _debug: {
         work_date,
