@@ -1,79 +1,68 @@
+// @ts-nocheck
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // deno-lint-ignore-file no-explicit-any
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-function jsonResponse(payload, status = 200) {
+function json(payload, status = 200) {
   return new Response(JSON.stringify(payload), {
     status,
     headers: { 'content-type': 'application/json' },
   });
 }
 
-function isRecord(v) {
+function isObj(v) {
   return !!v && typeof v === 'object' && !Array.isArray(v);
 }
 
 function parseJsonMaybe(v) {
   if (typeof v === 'string') {
-    try {
-      return JSON.parse(v);
-    } catch {
-      return v;
-    }
+    try { return JSON.parse(v); } catch { return v; }
   }
   return v;
 }
 
 function asArray(v) {
   if (Array.isArray(v)) return v;
-  if (isRecord(v) && Array.isArray(v.items)) return v.items;
-  if (isRecord(v) && Array.isArray(v.data)) return v.data;
+  if (isObj(v) && Array.isArray(v.items)) return v.items;
+  if (isObj(v) && Array.isArray(v.data)) return v.data;
   return [];
 }
 
 function normalizeDate(d) {
-  if (!d) return '';
-  const s = String(d);
+  const s = String(d ?? '').trim();
+  if (!s) return '';
   return s.length >= 10 ? s.slice(0, 10) : s;
-}
-
-function normalizeBool(v) {
-  if (typeof v === 'boolean') return v;
-  if (typeof v === 'number') return v !== 0;
-  if (typeof v === 'string') return ['true', '1', 'yes', 'on'].includes(v.toLowerCase());
-  return false;
-}
-
-function toNumber(v) {
-  const n =
-    typeof v === 'number' ? v :
-    typeof v === 'string' ? Number(v) :
-    NaN;
-  return Number.isFinite(n) ? n : NaN;
 }
 
 function normalizeStatus(raw) {
   const s = String(raw ?? '').trim();
-  if (!s) return 'draft';
-  if (s.includes('提出')) return 'submitted';
-  if (s.includes('下書')) return 'draft';
-  if (s === 'submitted' || s === 'draft') return s;
+  if (!s) return '下書き';
+  if (s.includes('提出')) return '提出済';
+  if (s.includes('下書')) return '下書き';
+  if (s === '提出済' || s === '下書き') return s;
   return s;
 }
 
-function pickString(obj, keys) {
-  if (!isRecord(obj)) return null;
-  for (const k of keys) {
-    const v = obj[k];
-    if (typeof v === 'string' && v.trim() !== '') return v;
-    if (typeof v === 'number') return String(v);
-  }
-  return null;
+function toInt(v) {
+  const n = Number.parseInt(String(v ?? ''), 10);
+  return Number.isFinite(n) ? n : NaN;
 }
 
-function getErrorInfo(e) {
-  if (e instanceof Error) {
-    return { message: e.message, stack: e.stack ?? null };
+function compact(obj) {
+  const o = {};
+  for (const k of Object.keys(obj)) {
+    const val = obj[k];
+    if (val !== undefined && val !== null) o[k] = val;
+  }
+  return o;
+}
+
+function errInfo(e) {
+  if (e && typeof e === 'object') {
+    return {
+      message: String(e.message ?? e.toString?.() ?? e),
+      stack: e.stack ? String(e.stack) : null,
+    };
   }
   return { message: String(e), stack: null };
 }
@@ -88,211 +77,178 @@ Deno.serve(async (req) => {
     step = 'auth';
     const user = await base44.auth.me();
     if (!user) {
-      return jsonResponse({ success: false, requestId, step, errorMessage: '認証が必要です' });
+      return json({ success: false, requestId, step, error: '認証が必要です' }, 200);
     }
 
     step = 'parseBody';
-    const rawBody = await req.json();
-    let body = parseJsonMaybe(rawBody);
-
-    if (!isRecord(body)) {
-      return jsonResponse({
-        success: false,
-        requestId,
-        step,
-        errorMessage: 'リクエストJSONが不正です',
-        bodyType: typeof body,
-        body,
-      });
+    let body = await req.json();
+    body = parseJsonMaybe(body);
+    if (!isObj(body)) {
+      return json({ success: false, requestId, step, error: 'リクエストJSONが不正です', body }, 200);
     }
 
-    const work_date = normalizeDate(
-      body.work_date ?? body.log_date ?? body.logDate ?? body.date
-    );
+    const work_date = normalizeDate(body.work_date ?? body.log_date ?? body.logDate ?? body.date);
 
     let rowsRaw = body.rows ?? body.items ?? body.entries ?? [];
     rowsRaw = parseJsonMaybe(rowsRaw);
-
     const rowsArr = Array.isArray(rowsRaw) ? rowsRaw : [rowsRaw];
 
-    // ★ここが重要：rowsの各要素が string(JSON文字列) なら object に戻す
     const rows = rowsArr
       .map((r) => parseJsonMaybe(r))
       .map((r) => (typeof r === 'string' ? parseJsonMaybe(r) : r))
-      .filter((r) => isRecord(r));
+      .filter((r) => isObj(r));
 
     const impersonate_user_email =
       typeof body.impersonate_user_email === 'string' ? body.impersonate_user_email : null;
 
     if (!work_date || rows.length === 0) {
-      return jsonResponse({
+      return json({
         success: false,
         requestId,
         step: 'validate',
-        errorMessage: 'work_date と rows（配列）が必要です（rows要素はobjectである必要があります）',
+        error: 'work_date と rows（配列）が必要です（rows要素はobjectである必要があります）',
         work_date,
-        rowsRawType: typeof rowsRaw,
         rows_in: rowsArr.length,
         rows_parsed: rows.length,
-        rows_sample_0: rowsArr[0],
-      });
+        rows_sample_0: rowsArr[0] ?? null,
+      }, 200);
     }
 
-    // service role（書き込み＆管理者検索用）
-    const writer = (/** @type {any} */ (base44)).asServiceRole ?? base44;
+    step = 'writer';
+    const writer = (base44.asServiceRole && base44.asServiceRole.entities) ? base44.asServiceRole : base44;
 
     step = 'effectiveUser';
     let effectiveUser = user;
     const isAdmin = user.role === 'admin' || user.isAdmin === true || user.isOwner === true;
 
     if (impersonate_user_email && isAdmin) {
-      const impRes = await writer.entities.User.filter({ email: impersonate_user_email });
-      const impersonated = asArray(impRes).filter(isRecord);
-      if (impersonated.length > 0) {
-        effectiveUser = impersonated[0];
-        console.log(`🎭 Impersonating for save: ${impersonate_user_email}`);
+      try {
+        const impRes = await writer.entities.User.filter({ email: impersonate_user_email });
+        const impersonated = asArray(impRes);
+        if (impersonated.length > 0) effectiveUser = impersonated[0];
+      } catch (e) {
+        // 失敗しても本処理は止めない
+        console.log('impersonate lookup failed:', errInfo(e).message);
       }
     }
 
-    const userEmail = effectiveUser.email;
-    const userName = effectiveUser.full_name || effectiveUser.name || String(userEmail).split('@')[0];
-    const departmentCode = effectiveUser.department_code ?? null;
-
-    console.log('📝 Saving daily log:', {
-      requestId,
-      work_date,
-      user_email: userEmail,
-      department_code: departmentCode,
-      rows_count_in: rowsArr.length,
-      rows_count_parsed: rows.length,
-    });
+    const userEmail = String(effectiveUser.email ?? '');
+    const userName = String(effectiveUser.full_name ?? effectiveUser.name ?? userEmail.split('@')[0] ?? '');
+    const departmentCode = String(effectiveUser.department_code ?? '');
 
     step = 'loadExisting';
-    const existingRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
-    const existingLogs = asArray(existingRes).filter(isRecord);
+    let existingLogs = [];
+    let existingLoadError = null;
 
-    const existingIds = existingLogs
-      .map((log) => (typeof log.id === 'string' ? log.id : null))
-      .filter((id) => typeof id === 'string');
+    // ★ filter が落ちるケースがあるので list() で取って JS で絞る
+    try {
+      const all = await writer.entities.WorkLog.list('-created_date', 5000, 0, ['id', 'work_date', 'user_email']);
+      existingLogs = asArray(all).filter((x) =>
+        isObj(x) &&
+        normalizeDate(x.work_date) === work_date &&
+        String(x.user_email ?? '') === userEmail
+      );
+    } catch (e) {
+      existingLoadError = errInfo(e).message;
+      existingLogs = [];
+    }
 
+    const existingIds = existingLogs.map((x) => x.id).filter(Boolean);
+
+    step = 'saveRows';
     const savedIds = [];
     const errors = [];
 
-    step = 'saveRows';
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
 
-      const workCategoryId = pickString(row, [
-        'work_category_id',
-        'workCategoryId',
-        'work_category',
-        'category_id',
-      ]);
+      const work_category_id =
+        row.work_category_id ?? row.workCategoryId ?? row.work_category ?? row.category_id ?? null;
 
-      const duration = toNumber(row.duration_minutes ?? row.minutes);
+      const duration_minutes = toInt(row.duration_minutes ?? row.minutes);
 
-      if (!workCategoryId || !Number.isFinite(duration) || duration <= 0) {
+      if (!work_category_id || !Number.isFinite(duration_minutes) || duration_minutes <= 0) {
         continue;
       }
 
+      const rowId = typeof row.id === 'string' ? row.id : null;
+      const op = (rowId && existingIds.includes(rowId)) ? 'update' : 'create';
+
       const status = normalizeStatus(row.status);
 
-      const rowId = typeof row.id === 'string' ? row.id : null;
-
-      const logData = {
+      const logData = compact({
         work_date,
         user_email: userEmail,
         user_name: userName,
         department_code: departmentCode,
 
-        client_id: pickString(row, ['client_id']) ?? null,
-        client_name: pickString(row, ['client_name']) ?? null,
-        project_id: pickString(row, ['project_id']) ?? null,
-        project_name: pickString(row, ['project_name']) ?? null,
+        client_id: row.client_id ?? '',
+        client_name: row.client_name ?? '',
+        project_id: row.project_id ?? '',
+        project_name: row.project_name ?? '',
+        is_temporary_project: !!row.is_temporary_project,
 
-        is_temporary_project: normalizeBool(row.is_temporary_project),
-        work_category_id: String(workCategoryId),
-        work_category_name: pickString(row, ['work_category_name']) ?? null,
-        is_revision: normalizeBool(row.is_revision),
+        work_category_id: String(work_category_id),
+        work_category_name: row.work_category_name ?? '',
+        is_revision: !!row.is_revision,
 
-        duration_minutes: duration,
-        description: typeof row.description === 'string' ? row.description : (typeof row.memo === 'string' ? row.memo : ''),
-
-        status,
-        submitted_at: status === 'submitted' ? new Date().toISOString() : null,
-      };
+        duration_minutes,
+        description: row.description ?? '',
+        status, // 「下書き」 or 「提出済」
+      });
 
       try {
-        let savedLog;
-
-        if (rowId && existingIds.includes(rowId)) {
-          step = 'update';
-          savedLog = await writer.entities.WorkLog.update(rowId, logData);
+        let saved;
+        if (op === 'update') {
+          saved = await writer.entities.WorkLog.update(rowId, logData);
           savedIds.push(rowId);
         } else {
-          step = 'create';
-          savedLog = await writer.entities.WorkLog.create(logData);
-          if (isRecord(savedLog) && typeof savedLog.id === 'string') savedIds.push(savedLog.id);
+          saved = await writer.entities.WorkLog.create(logData);
+          if (saved && saved.id) savedIds.push(saved.id);
         }
-
-        console.log(`✅ Saved log: ${isRecord(savedLog) ? savedLog.id : '(no id)'}`);
       } catch (e) {
-        const info = getErrorInfo(e);
-        console.error('❌ Failed to save log:', info.message);
-
+        const info = errInfo(e);
         errors.push({
           index: i,
           row_id: rowId ?? `row_${i}`,
-          errorMessage: info.message,
-          errorStack: info.stack,
-          payloadUsed: logData,
-          rowType: typeof row,
+          op,
+          error: info.message,
+          stack: info.stack,
+          data: logData,
         });
       }
     }
 
-    // 削除は一旦無効（デバッグ中に消えるのを防ぐ）
-    const idsToDelete = [];
+    const success = errors.length === 0;
 
-    const savedCount = savedIds.length;
-    const success = savedCount > 0 && errors.length === 0;
-
-    step = 'verify';
-    let verifySample = [];
-    try {
-      const verRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
-      verifySample = asArray(verRes).filter(isRecord).slice(0, 5);
-    } catch {
-      // ignore
-    }
-
-    return jsonResponse({
+    return json({
       success,
       requestId,
-      saved_count: savedCount,
-      deleted_count: idsToDelete.length,
+      step: 'done',
+      saved_count: savedIds.length,
+      deleted_count: 0,
+      error: success ? undefined : `保存中にエラーが発生しました（${errors.length}件）`,
       errors: errors.length ? errors : undefined,
-      verifySample,
       _debug: {
-        stepEnd: step,
         work_date,
         user_email: userEmail,
         department_code: departmentCode,
         rows_in: rowsArr.length,
         rows_parsed: rows.length,
+        existing_loaded: existingLogs.length,
+        existingLoadError,
         impersonate_user_email: impersonate_user_email ?? null,
       },
-    });
-  } catch (e) {
-    const info = getErrorInfo(e);
-    console.error('saveDailyLog fatal error:', info.message);
+    }, 200);
 
-    return jsonResponse({
+  } catch (e) {
+    const info = errInfo(e);
+    return json({
       success: false,
       requestId,
       step,
-      errorMessage: info.message,
-      errorStack: info.stack,
-    });
+      error: info.message,
+      errors: [{ index: -1, row_id: 'fatal', op: 'fatal', error: info.message, stack: info.stack }],
+    }, 200);
   }
 });
