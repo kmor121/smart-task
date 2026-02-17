@@ -120,8 +120,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ★as any なし
-    const writer = base44.asServiceRole ? base44.asServiceRole : base44;
+    // service role（書き込み＆管理者検索用）
+    const writer = base44.asServiceRole || base44;
 
     step = "effectiveUser";
     let effectiveUser = user;
@@ -141,18 +141,18 @@ Deno.serve(async (req) => {
     const userName = effectiveUser.full_name || effectiveUser.name || String(userEmail).split("@")[0];
     const departmentCode = effectiveUser.department_code || "";
 
-    // 既存取得は「失敗しても続行」（更新判定だけに使う）
+    // 既存取得は一旦無効化（切り分けのため）
     step = "loadExisting";
-    let existingIds = [];
+    const existingIds = [];
     let existingLoadError = null;
-    try {
-      const existingRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
-      const existingLogs = asArray(existingRes);
-      existingIds = existingLogs.map((l) => l?.id).filter((id) => typeof id === "string");
-    } catch (e) {
-      existingLoadError = errInfo(e);
-      existingIds = [];
-    }
+    // try {
+    //   const existingRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
+    //   const existingLogs = asArray(existingRes);
+    //   existingIds = existingLogs.map((l) => l?.id).filter((id) => typeof id === "string");
+    // } catch (e) {
+    //   existingLoadError = errInfo(e);
+    //   existingIds = [];
+    // }
 
     const savedIds = [];
     const errors = [];
@@ -212,15 +212,13 @@ Deno.serve(async (req) => {
       } catch (e) {
         const info = errInfo(e);
 
-        // ★DailyLog.jsが表示できる形に寄せる（複数キーで持たせる）
+        // DailyLog.js表示用の形式
         errors.push({
           index: i,
-          op,
           row_id: rowId ?? `row_${i}`,
-          errorMessage: info.message,
-          errorStack: info.stack,
-          response_status: info.response_status,
-          response_data: info.response_data,
+          op,
+          error: info.message,
+          stack: info.stack,
           data: logData,
         });
       }
@@ -237,7 +235,7 @@ Deno.serve(async (req) => {
       saved_count,
       deleted_count: 0,
       error: success ? undefined : `保存中にエラーが発生しました (${errors.length}件)`,
-      errors: errors.length ? errors : undefined,
+      errors: errors.length > 0 ? errors : [],
       _debug: {
         work_date,
         user_email: userEmail,
