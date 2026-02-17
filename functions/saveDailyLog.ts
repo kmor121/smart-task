@@ -1,8 +1,17 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// deno-lint-ignore-file no-explicit-any
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-function parseJsonMaybe(v: any) {
+function jsonResponse(payload, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+function isRecord(v) {
+  return !!v && typeof v === 'object' && !Array.isArray(v);
+}
+
+function parseJsonMaybe(v) {
   if (typeof v === 'string') {
     try {
       return JSON.parse(v);
@@ -13,35 +22,61 @@ function parseJsonMaybe(v: any) {
   return v;
 }
 
-function asArray(v: any): any[] {
+function asArray(v) {
   if (Array.isArray(v)) return v;
-  if (v && Array.isArray(v.items)) return v.items;
-  if (v && Array.isArray(v.data)) return v.data;
+  if (isRecord(v) && Array.isArray(v.items)) return v.items;
+  if (isRecord(v) && Array.isArray(v.data)) return v.data;
   return [];
 }
 
-function normalizeDate(d: any): string {
+function normalizeDate(d) {
   if (!d) return '';
   const s = String(d);
   return s.length >= 10 ? s.slice(0, 10) : s;
 }
 
-function normalizeBool(v: any): boolean {
+function normalizeBool(v) {
   if (typeof v === 'boolean') return v;
   if (typeof v === 'number') return v !== 0;
   if (typeof v === 'string') return ['true', '1', 'yes', 'on'].includes(v.toLowerCase());
   return false;
 }
 
-function normalizeStatus(raw: any): string {
+function toNumber(v) {
+  const n =
+    typeof v === 'number' ? v :
+    typeof v === 'string' ? Number(v) :
+    NaN;
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function normalizeStatus(raw) {
   const s = String(raw ?? '').trim();
   if (!s) return 'draft';
   if (s.includes('提出')) return 'submitted';
   if (s.includes('下書')) return 'draft';
+  if (s === 'submitted' || s === 'draft') return s;
   return s;
 }
 
-Deno.serve(async (req: Request) => {
+function pickString(obj, keys) {
+  if (!isRecord(obj)) return null;
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === 'string' && v.trim() !== '') return v;
+    if (typeof v === 'number') return String(v);
+  }
+  return null;
+}
+
+function getErrorInfo(e) {
+  if (e instanceof Error) {
+    return { message: e.message, stack: e.stack ?? null };
+  }
+  return { message: String(e), stack: null };
+}
+
+Deno.serve(async (req) => {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   let step = 'start';
 
@@ -51,37 +86,44 @@ Deno.serve(async (req: Request) => {
     step = 'auth';
     const user = await base44.auth.me();
     if (!user) {
-      return new Response(JSON.stringify(
-        { success: false, requestId, step, errorMessage: '認証が必要です' }
-      ), { status: 200, headers: { 'content-type': 'application/json' } });
+      return jsonResponse({ success: false, requestId, step, errorMessage: '認証が必要です' });
     }
 
     step = 'parseBody';
-    let body: any = await req.json();
-    body = parseJsonMaybe(body);
+    const rawBody = await req.json();
+    let body = parseJsonMaybe(rawBody);
 
-    if (!body || typeof body !== 'object') {
-      return new Response(JSON.stringify(
-        { success: false, requestId, step, errorMessage: 'リクエストJSONが不正です', bodyType: typeof body, body }
-      ), { status: 200, headers: { 'content-type': 'application/json' } });
+    if (!isRecord(body)) {
+      return jsonResponse({
+        success: false,
+        requestId,
+        step,
+        errorMessage: 'リクエストJSONが不正です',
+        bodyType: typeof body,
+        body,
+      });
     }
 
-    const work_date = normalizeDate(body.work_date ?? body.log_date ?? body.logDate ?? body.date);
+    const work_date = normalizeDate(
+      body.work_date ?? body.log_date ?? body.logDate ?? body.date
+    );
 
-    let rowsRaw: any = body.rows ?? body.items ?? body.entries ?? [];
+    let rowsRaw = body.rows ?? body.items ?? body.entries ?? [];
     rowsRaw = parseJsonMaybe(rowsRaw);
 
-    const rowsArr: any[] = Array.isArray(rowsRaw) ? rowsRaw : [rowsRaw];
+    const rowsArr = Array.isArray(rowsRaw) ? rowsRaw : [rowsRaw];
 
+    // ★ここが重要：rowsの各要素が string(JSON文字列) なら object に戻す
     const rows = rowsArr
       .map((r) => parseJsonMaybe(r))
       .map((r) => (typeof r === 'string' ? parseJsonMaybe(r) : r))
-      .filter((r) => r && typeof r === 'object');
+      .filter((r) => isRecord(r));
 
-    const impersonate_user_email = body.impersonate_user_email;
+    const impersonate_user_email =
+      typeof body.impersonate_user_email === 'string' ? body.impersonate_user_email : null;
 
     if (!work_date || rows.length === 0) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: false,
         requestId,
         step: 'validate',
@@ -90,18 +132,20 @@ Deno.serve(async (req: Request) => {
         rowsRawType: typeof rowsRaw,
         rows_in: rowsArr.length,
         rows_parsed: rows.length,
-      }), { status: 200, headers: { 'content-type': 'application/json' } });
+        rows_sample_0: rowsArr[0],
+      });
     }
 
-    const writer = (base44 as any).asServiceRole ?? base44;
+    // service role（書き込み＆管理者検索用）
+    const writer = base44.asServiceRole ? base44.asServiceRole : base44;
 
     step = 'effectiveUser';
-    let effectiveUser: any = user;
+    let effectiveUser = user;
     const isAdmin = user.role === 'admin' || user.isAdmin === true || user.isOwner === true;
 
     if (impersonate_user_email && isAdmin) {
       const impRes = await writer.entities.User.filter({ email: impersonate_user_email });
-      const impersonated = asArray(impRes);
+      const impersonated = asArray(impRes).filter(isRecord);
       if (impersonated.length > 0) {
         effectiveUser = impersonated[0];
         console.log(`🎭 Impersonating for save: ${impersonate_user_email}`);
@@ -109,8 +153,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const userEmail = effectiveUser.email;
-    const userName = effectiveUser.full_name || effectiveUser.name || userEmail.split('@')[0];
-    const departmentCode = effectiveUser.department_code || null;
+    const userName = effectiveUser.full_name || effectiveUser.name || String(userEmail).split('@')[0];
+    const departmentCode = effectiveUser.department_code ?? null;
 
     console.log('📝 Saving daily log:', {
       requestId,
@@ -121,23 +165,29 @@ Deno.serve(async (req: Request) => {
       rows_count_parsed: rows.length,
     });
 
-    // 既存ログ（※ここでfilterが不安なら list→JS絞り込みに後で変更可）
     step = 'loadExisting';
     const existingRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
-    const existingLogs = asArray(existingRes);
-    const existingIds = existingLogs.map((log: any) => log.id).filter(Boolean);
+    const existingLogs = asArray(existingRes).filter(isRecord);
 
-    const savedIds: string[] = [];
-    const errors: any[] = [];
+    const existingIds = existingLogs
+      .map((log) => (typeof log.id === 'string' ? log.id : null))
+      .filter((id) => typeof id === 'string');
+
+    const savedIds = [];
+    const errors = [];
 
     step = 'saveRows';
     for (let i = 0; i < rows.length; i++) {
-      const row: any = rows[i];
+      const row = rows[i];
 
-      const workCategoryId =
-        row.work_category_id ?? row.workCategoryId ?? row.work_category ?? row.category_id ?? null;
+      const workCategoryId = pickString(row, [
+        'work_category_id',
+        'workCategoryId',
+        'work_category',
+        'category_id',
+      ]);
 
-      const duration = Number(row.duration_minutes ?? row.minutes ?? 0);
+      const duration = toNumber(row.duration_minutes ?? row.minutes);
 
       if (!workCategoryId || !Number.isFinite(duration) || duration <= 0) {
         continue;
@@ -145,74 +195,76 @@ Deno.serve(async (req: Request) => {
 
       const status = normalizeStatus(row.status);
 
-      const logData: any = {
+      const rowId = typeof row.id === 'string' ? row.id : null;
+
+      const logData = {
         work_date,
         user_email: userEmail,
         user_name: userName,
         department_code: departmentCode,
 
-        client_id: row.client_id ?? null,
-        client_name: row.client_name ?? null,
-        project_id: row.project_id ?? null,
-        project_name: row.project_name ?? null,
+        client_id: pickString(row, ['client_id']) ?? null,
+        client_name: pickString(row, ['client_name']) ?? null,
+        project_id: pickString(row, ['project_id']) ?? null,
+        project_name: pickString(row, ['project_name']) ?? null,
 
         is_temporary_project: normalizeBool(row.is_temporary_project),
         work_category_id: String(workCategoryId),
-        work_category_name: row.work_category_name ?? null,
+        work_category_name: pickString(row, ['work_category_name']) ?? null,
         is_revision: normalizeBool(row.is_revision),
 
         duration_minutes: duration,
-        description: row.description ?? row.memo ?? '',
+        description: typeof row.description === 'string' ? row.description : (typeof row.memo === 'string' ? row.memo : ''),
 
         status,
         submitted_at: status === 'submitted' ? new Date().toISOString() : null,
       };
 
       try {
-        let savedLog: any;
+        let savedLog;
 
-        if (row.id && existingIds.includes(row.id)) {
+        if (rowId && existingIds.includes(rowId)) {
           step = 'update';
-          savedLog = await writer.entities.WorkLog.update(row.id, logData);
-          savedIds.push(row.id);
+          savedLog = await writer.entities.WorkLog.update(rowId, logData);
+          savedIds.push(rowId);
         } else {
           step = 'create';
           savedLog = await writer.entities.WorkLog.create(logData);
-          if (savedLog?.id) savedIds.push(savedLog.id);
+          if (isRecord(savedLog) && typeof savedLog.id === 'string') savedIds.push(savedLog.id);
         }
 
-        console.log(`✅ Saved log: ${savedLog?.id ?? '(no id)'}`);
+        console.log(`✅ Saved log: ${isRecord(savedLog) ? savedLog.id : '(no id)'}`);
       } catch (e) {
-        console.error('❌ Failed to save log:', e);
-        const err = e as any;
+        const info = getErrorInfo(e);
+        console.error('❌ Failed to save log:', info.message);
+
         errors.push({
           index: i,
-          row_id: row.id ?? `row_${i}`,
-          errorMessage: err?.message ?? String(e),
-          errorStack: err?.stack ?? null,
+          row_id: rowId ?? `row_${i}`,
+          errorMessage: info.message,
+          errorStack: info.stack,
           payloadUsed: logData,
           rowType: typeof row,
         });
       }
     }
 
-    // まずは削除は無効化（デバッグ中に消えるのを防ぐ）
-    const idsToDelete: string[] = [];
+    // 削除は一旦無効（デバッグ中に消えるのを防ぐ）
+    const idsToDelete = [];
 
-    // ★成功条件：1件以上保存でき、エラー0
-    const savedCount = savedIds.filter(Boolean).length;
+    const savedCount = savedIds.length;
     const success = savedCount > 0 && errors.length === 0;
 
     step = 'verify';
-    let verifySample: any[] = [];
+    let verifySample = [];
     try {
       const verRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
-      verifySample = asArray(verRes).slice(0, 5);
+      verifySample = asArray(verRes).filter(isRecord).slice(0, 5);
     } catch {
       // ignore
     }
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       success,
       requestId,
       saved_count: savedCount,
@@ -228,16 +280,17 @@ Deno.serve(async (req: Request) => {
         rows_parsed: rows.length,
         impersonate_user_email: impersonate_user_email ?? null,
       },
-    }), { status: 200, headers: { 'content-type': 'application/json' } });
+    });
   } catch (e) {
-    console.error('saveDailyLog fatal error:', e);
-    const err = e as any;
-    return new Response(JSON.stringify({
+    const info = getErrorInfo(e);
+    console.error('saveDailyLog fatal error:', info.message);
+
+    return jsonResponse({
       success: false,
       requestId,
       step,
-      errorMessage: err?.message ?? String(e),
-      errorStack: err?.stack ?? null,
-    }), { status: 200, headers: { 'content-type': 'application/json' } });
+      errorMessage: info.message,
+      errorStack: info.stack,
+    });
   }
 });
