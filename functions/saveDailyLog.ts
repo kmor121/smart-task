@@ -178,18 +178,42 @@ Deno.serve(async (req) => {
       console.error(`[${requestId}] ⚠️ Failed to fetch verify sample:`, error.message);
     }
 
-    console.log(`[${requestId}] ✅ Save complete:`, {
-      created: savedIds.length,
+    // 検証用：保存したユーザーの最新データを取得
+    let verifyMineSample = [];
+    let saved_this_call = savedIds.length;
+    try {
+      const latest = await entities.WorkLog.list("-created_date", 20);
+      const mine = latest.filter(r => r.user_email === userEmail);
+      verifyMineSample = mine.slice(0, 3).map(log => ({
+        id: log.id,
+        work_date: log.work_date,
+        user_email: log.user_email,
+        duration_minutes: log.duration_minutes,
+        status: log.status,
+        created_date: log.created_date
+      }));
+      console.log(`[${requestId}] 🔍 Verify mine sample (${mine.length} total):`, verifyMineSample);
+    } catch (error) {
+      console.error(`[${requestId}] ⚠️ Failed to fetch verify mine sample:`, error.message);
+    }
+
+    // saved_count が 0 なら success: false にする
+    const isSuccess = saved_this_call > 0;
+    
+    console.log(`[${requestId}] ${isSuccess ? '✅' : '❌'} Save complete:`, {
+      created: saved_this_call,
       errors: errors.length
     });
 
     const response = {
-      success: true,
+      success: isSuccess,
       requestId,
-      saved_count: savedIds.length,
+      saved_count: saved_this_call,
+      saved_this_call,
       deleted_count: 0,
       created_ids: savedIds,
       verifySample,
+      verifyMineSample,
       errors: errors.length > 0 ? errors : undefined,
       _debug: {
         work_date,
@@ -201,7 +225,7 @@ Deno.serve(async (req) => {
       }
     };
 
-    return Response.json(response);
+    return Response.json(response, { status: isSuccess ? 200 : 500 });
 
   } catch (error) {
     const step = "top_level_error";

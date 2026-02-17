@@ -637,9 +637,38 @@ export default function DailyLog() {
                   </details>
                 )}
                 {lastSaveResult.errors && lastSaveResult.errors.length > 0 && (
-                  <details className="text-red-600 mt-1">
-                    <summary className="cursor-pointer">個別エラー ({lastSaveResult.errors.length}件)</summary>
-                    <pre className="text-[10px] whitespace-pre-wrap mt-1">{JSON.stringify(lastSaveResult.errors, null, 2)}</pre>
+                  <div className="text-red-600 mt-2">
+                    <div className="font-semibold mb-1">個別エラー ({lastSaveResult.errors.length}件):</div>
+                    {lastSaveResult.errors.map((err, idx) => (
+                      <div key={idx} className="mb-2 p-2 bg-red-50 rounded border border-red-200">
+                        <div>行 #{err.row_index}: {err.step}</div>
+                        {err.error?.message && (
+                          <div className="text-red-700 font-mono text-[11px] mt-1">
+                            エラー: {err.error.message}
+                          </div>
+                        )}
+                        {err.error?.stack && (
+                          <details className="mt-1">
+                            <summary className="cursor-pointer text-[10px]">スタックトレース</summary>
+                            <pre className="text-[9px] whitespace-pre-wrap mt-1 overflow-x-auto">{err.error.stack}</pre>
+                          </details>
+                        )}
+                        {err.row_data && (
+                          <div className="text-[10px] mt-1 text-slate-600">
+                            データ: {JSON.stringify(err.row_data, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {lastSaveResult.saved_this_call !== undefined && (
+                  <div className="text-green-700 mt-1">今回保存: {lastSaveResult.saved_this_call}件</div>
+                )}
+                {lastSaveResult.verifyMineSample && lastSaveResult.verifyMineSample.length > 0 && (
+                  <details className="text-blue-600 mt-1">
+                    <summary className="cursor-pointer">自分のデータ確認 ({lastSaveResult.verifyMineSample.length}件)</summary>
+                    <pre className="text-[10px] whitespace-pre-wrap mt-1">{JSON.stringify(lastSaveResult.verifyMineSample, null, 2)}</pre>
                   </details>
                 )}
                 {lastSaveResult._debug && (
