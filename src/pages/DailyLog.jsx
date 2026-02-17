@@ -609,16 +609,37 @@ export default function DailyLog() {
               <div className="font-semibold text-slate-700 mb-1">📊 保存結果:</div>
               <div className="space-y-0.5 text-slate-600 font-mono">
                 <div>success: {lastSaveResult.success ? "✅" : "❌"}</div>
+                {lastSaveResult.requestId && (
+                  <div className="text-purple-600">requestId: {lastSaveResult.requestId}</div>
+                )}
+                {lastSaveResult.step && (
+                  <div className="text-orange-600">step: {lastSaveResult.step}</div>
+                )}
                 {lastSaveResult.saved_count !== undefined && (
                   <div>saved_count: {lastSaveResult.saved_count}</div>
                 )}
-                {lastSaveResult.error && (
+                {typeof lastSaveResult.error === 'string' && (
                   <div className="text-red-600">error: {lastSaveResult.error}</div>
+                )}
+                {typeof lastSaveResult.error === 'object' && lastSaveResult.error?.message && (
+                  <div className="text-red-600">error: {lastSaveResult.error.message}</div>
+                )}
+                {lastSaveResult.error?.stack && (
+                  <details className="text-red-600 mt-1">
+                    <summary className="cursor-pointer">スタックトレース</summary>
+                    <pre className="text-[10px] whitespace-pre-wrap mt-1">{lastSaveResult.error.stack}</pre>
+                  </details>
                 )}
                 {lastSaveResult.error_stack && (
                   <details className="text-red-600 mt-1">
-                    <summary className="cursor-pointer">スタックトレース</summary>
+                    <summary className="cursor-pointer">スタックトレース (旧)</summary>
                     <pre className="text-[10px] whitespace-pre-wrap mt-1">{lastSaveResult.error_stack}</pre>
+                  </details>
+                )}
+                {lastSaveResult.errors && lastSaveResult.errors.length > 0 && (
+                  <details className="text-red-600 mt-1">
+                    <summary className="cursor-pointer">個別エラー ({lastSaveResult.errors.length}件)</summary>
+                    <pre className="text-[10px] whitespace-pre-wrap mt-1">{JSON.stringify(lastSaveResult.errors, null, 2)}</pre>
                   </details>
                 )}
                 {lastSaveResult._debug && (

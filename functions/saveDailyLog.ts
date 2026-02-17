@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
 
     const userEmail = effectiveUser.email;
     const userName = effectiveUser.full_name || userEmail.split('@')[0];
-    const departmentCode = effectiveUser.department_code || '';
+    const departmentCode = effectiveUser.department_code || null;
 
     console.log(`[${requestId}] 📝 Saving daily log:`, {
       work_date,
@@ -63,86 +63,99 @@ Deno.serve(async (req) => {
       is_impersonated: impersonate_user_email ? true : false
     });
 
-    // 既存の日報を取得（list→JS filter に変更）
+    // 既存の日報を取得（暫定：エラーが出ても処理続行）
     console.log(`[${requestId}] 🔍 Fetching existing logs for user: ${userEmail}, date: ${work_date}...`);
     
     let existingLogs = [];
+    let existingIds = [];
+    
     try {
+      // list() には引数を一切渡さない（引数なし or sortのみ）
       const allLogs = await base44.asServiceRole.entities.WorkLog.list();
       console.log(`[${requestId}] 📊 Total logs fetched: ${allLogs.length}`);
+      
+      // JavaScript で絞り込み
       existingLogs = allLogs.filter(log => 
         log.work_date === work_date && log.user_email === userEmail
       );
+      existingIds = existingLogs.map(log => log.id);
       console.log(`[${requestId}] 📋 Existing logs for this date/user: ${existingLogs.length}`);
     } catch (error) {
-      console.error(`[${requestId}] ❌ Failed to fetch existing logs:`, error);
-      throw new Error(`既存ログの取得に失敗: ${error.message}`);
+      console.error(`[${requestId}] ⚠️ Failed to fetch existing logs (continuing anyway):`, error.message);
+      console.error(`[${requestId}] Error stack:`, error.stack);
+      // エラーが出ても処理続行（既存ログなしとして扱う）
+      existingLogs = [];
+      existingIds = [];
     }
 
-    const existingIds = existingLogs.map(log => log.id);
     const savedIds = [];
     const errors = [];
+
+    // ID 正規化関数
+    const normalizeId = (id) => {
+      if (!id || id === "" || id === "null" || id === "_none") return null;
+      if (typeof id === "object" && id !== null) {
+        return id.id ? String(id.id) : (id.value ? String(id.value) : null);
+      }
+      return String(id);
+    };
 
     // 各行を保存
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
+      const step = `save_row_${i}`;
       
-      if (!row.work_category_id || !row.duration_minutes) {
-        console.log(`[${requestId}] ⏭️  Skipping row ${i} (missing required fields)`);
-        continue; // 必須項目がない行はスキップ
-      }
-
-      // ID フィールドを正規化（空文字列 → null）
-      const normalizeId = (id) => {
-        if (!id || id === "" || id === "null" || id === "_none") return null;
-        return String(id);
-      };
-
-      const logData = {
-        work_date,
-        user_email: userEmail,
-        user_name: userName,
-        department_code: departmentCode,
-        client_id: normalizeId(row.client_id),
-        client_name: row.client_name || '',
-        project_id: normalizeId(row.project_id),
-        project_name: row.project_name || '',
-        is_temporary_project: row.is_temporary_project || false,
-        work_category_id: row.work_category_id,
-        work_category_name: row.work_category_name || '',
-        is_revision: row.is_revision || false,
-        duration_minutes: parseInt(row.duration_minutes) || 0,
-        description: row.description || '',
-        status: row.status || '下書き',
-        submitted_at: row.submitted_at || null
-      };
-      
-      console.log(`[${requestId}] 💾 Saving row ${i}:`, {
-        client_id: logData.client_id,
-        project_id: logData.project_id,
-        work_category_id: logData.work_category_id,
-        duration_minutes: logData.duration_minutes
-      });
-
       try {
+        if (!row.work_category_id || !row.duration_minutes) {
+          console.log(`[${requestId}] [${step}] ⏭️  Skipping (missing required fields)`);
+          continue;
+        }
+
+        const logData = {
+          work_date,
+          user_email: userEmail,
+          user_name: userName,
+          department_code: departmentCode,
+          client_id: normalizeId(row.client_id),
+          client_name: row.client_name || '',
+          project_id: normalizeId(row.project_id),
+          project_name: row.project_name || '',
+          is_temporary_project: row.is_temporary_project || false,
+          work_category_id: normalizeId(row.work_category_id),
+          work_category_name: row.work_category_name || '',
+          is_revision: row.is_revision || false,
+          duration_minutes: Number(row.duration_minutes) || 0,
+          description: row.description || '',
+          status: row.status || '下書き',
+          submitted_at: row.submitted_at || null
+        };
+        
+        console.log(`[${requestId}] [${step}] 💾 Saving:`, {
+          client_id: logData.client_id,
+          project_id: logData.project_id,
+          work_category_id: logData.work_category_id,
+          duration_minutes: logData.duration_minutes
+        });
+
         let savedLog;
         if (row.id && existingIds.includes(row.id)) {
           // 既存ログを更新
-          console.log(`[${requestId}] 🔄 Updating log ${row.id}...`);
+          console.log(`[${requestId}] [${step}] 🔄 Updating log ${row.id}...`);
           savedLog = await base44.asServiceRole.entities.WorkLog.update(row.id, logData);
           savedIds.push(row.id);
-          console.log(`[${requestId}] ✅ Updated log: ${savedLog.id}`);
+          console.log(`[${requestId}] [${step}] ✅ Updated: ${savedLog.id}`);
         } else {
           // 新規作成
-          console.log(`[${requestId}] 🆕 Creating new log...`);
+          console.log(`[${requestId}] [${step}] 🆕 Creating new log...`);
           savedLog = await base44.asServiceRole.entities.WorkLog.create(logData);
           savedIds.push(savedLog.id);
-          console.log(`[${requestId}] ✅ Created log: ${savedLog.id}`);
+          console.log(`[${requestId}] [${step}] ✅ Created: ${savedLog.id}`);
         }
       } catch (error) {
-        console.error(`[${requestId}] ❌ Failed to save row ${i}:`, error);
-        console.error(`[${requestId}] Error stack:`, error.stack);
+        console.error(`[${requestId}] [${step}] ❌ Failed:`, error.message);
+        console.error(`[${requestId}] [${step}] Stack:`, error.stack);
         errors.push({ 
+          step,
           row_index: i,
           row_data: { 
             client_id: row.client_id, 
@@ -150,8 +163,10 @@ Deno.serve(async (req) => {
             work_category_id: row.work_category_id,
             duration_minutes: row.duration_minutes
           }, 
-          error: error.message || String(error),
-          stack: error.stack 
+          error: {
+            message: error.message || String(error),
+            stack: error.stack
+          }
         });
       }
     }
@@ -192,18 +207,22 @@ Deno.serve(async (req) => {
     return Response.json(response);
 
   } catch (error) {
-    console.error(`[${requestId}] ❌ saveDailyLog error:`, error);
-    console.error(`[${requestId}] Error stack:`, error.stack);
+    const step = "top_level_error";
+    console.error(`[${requestId}] [${step}] ❌ saveDailyLog error:`, error.message);
+    console.error(`[${requestId}] [${step}] Error stack:`, error.stack);
+    console.error(`[${requestId}] [${step}] Received payload:`, JSON.stringify(payload, null, 2));
+    
     return Response.json({ 
       success: false,
       requestId,
-      error: error.message || '保存に失敗しました',
-      error_stack: error.stack,
-      received_payload: payload,
-      _debug: {
-        error_type: error.constructor.name,
-        error_details: String(error)
-      }
+      step,
+      error: {
+        message: error.message || '保存に失敗しました',
+        stack: error.stack,
+        type: error.constructor.name,
+        details: String(error)
+      },
+      received_payload: payload
     }, { status: 500 });
   }
 });
