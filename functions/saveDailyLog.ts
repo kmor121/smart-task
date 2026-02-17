@@ -141,18 +141,20 @@ Deno.serve(async (req) => {
     const userName = effectiveUser.full_name || effectiveUser.name || String(userEmail).split("@")[0];
     const departmentCode = effectiveUser.department_code || "";
 
-    // 既存取得は一旦無効化（切り分けのため）
+    // 既存取得（list + JS絞り込み）
     step = "loadExisting";
-    const existingIds = [];
+    let existingIds = [];
     let existingLoadError = null;
-    // try {
-    //   const existingRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
-    //   const existingLogs = asArray(existingRes);
-    //   existingIds = existingLogs.map((l) => l?.id).filter((id) => typeof id === "string");
-    // } catch (e) {
-    //   existingLoadError = errInfo(e);
-    //   existingIds = [];
-    // }
+    try {
+      const allLogs = await writer.entities.WorkLog.list('-created_date', 5000);
+      const existingLogs = asArray(allLogs).filter((l) => 
+        l && l.work_date === work_date && l.user_email === userEmail
+      );
+      existingIds = existingLogs.map((l) => l?.id).filter((id) => typeof id === "string");
+    } catch (e) {
+      existingLoadError = errInfo(e);
+      existingIds = [];
+    }
 
     const savedIds = [];
     const errors = [];

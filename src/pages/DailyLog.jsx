@@ -97,7 +97,10 @@ export default function DailyLog() {
   // 既存のWorkLogsを読み込み
   const { data: existingLogs = [], isLoading } = useQuery({
     queryKey: ["workLogs", dateStr, user?.email],
-    queryFn: () => base44.entities.WorkLog.filter({ work_date: dateStr, user_email: user.email }),
+    queryFn: async () => {
+      const allLogs = await base44.entities.WorkLog.list('-created_date', 5000);
+      return allLogs.filter((l) => l.work_date === dateStr && l.user_email === user.email);
+    },
     enabled: !!user?.email,
   });
 
@@ -105,9 +108,10 @@ export default function DailyLog() {
   useEffect(() => {
     const cleanupData = async () => {
       if (!user?.email) return;
-      
+
       try {
-        const allLogs = await base44.entities.WorkLog.filter({ user_email: user.email });
+        const allLogsList = await base44.entities.WorkLog.list('-created_date', 5000);
+        const allLogs = allLogsList.filter((l) => l.user_email === user.email);
         const needsCleanup = allLogs.filter(log => {
           const pid = log.project_id;
           const cid = log.client_id;
@@ -302,10 +306,10 @@ export default function DailyLog() {
       const previousDateStr = format(previousDate, "yyyy-MM-dd");
 
       // 前日の日報を取得
-      const prevLogs = await base44.entities.WorkLog.filter({
-        user_email: user.email,
-        work_date: previousDateStr
-      });
+      const allLogs = await base44.entities.WorkLog.list('-created_date', 5000);
+      const prevLogs = allLogs.filter((l) => 
+        l.user_email === user.email && l.work_date === previousDateStr
+      );
 
       if (prevLogs.length === 0) {
         return;
