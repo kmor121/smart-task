@@ -105,8 +105,19 @@ Deno.serve(async (req) => {
       try {
         if (!row.work_category_id || !row.duration_minutes) {
           console.log(`[${requestId}] [${step}] ⏭️  Skipping (missing required fields)`);
+          errors.push({
+            step,
+            row_index: i,
+            skipped: true,
+            reason: "Missing work_category_id or duration_minutes",
+            row_data: row
+          });
           continue;
         }
+
+        // 提出時のステータスと日時
+        const isSubmission = row.status === '提出済' || payload.submit === true;
+        const now = new Date().toISOString();
 
         const logData = {
           work_date,
@@ -117,22 +128,17 @@ Deno.serve(async (req) => {
           client_name: row.client_name || '',
           project_id: normalizeId(row.project_id),
           project_name: row.project_name || '',
-          is_temporary_project: row.is_temporary_project || false,
+          is_temporary_project: row.is_temporary_project === true,
           work_category_id: normalizeId(row.work_category_id),
           work_category_name: row.work_category_name || '',
-          is_revision: row.is_revision || false,
+          is_revision: row.is_revision === true,
           duration_minutes: Number(row.duration_minutes) || 0,
           description: row.description || '',
-          status: row.status || '下書き',
-          submitted_at: row.submitted_at || null
+          status: isSubmission ? '提出済' : '下書き',
+          submitted_at: isSubmission ? now : null
         };
         
-        console.log(`[${requestId}] [${step}] 💾 Creating new log:`, {
-          client_id: logData.client_id,
-          project_id: logData.project_id,
-          work_category_id: logData.work_category_id,
-          duration_minutes: logData.duration_minutes
-        });
+        console.log(`[${requestId}] [${step}] 💾 Creating new log with payload:`, JSON.stringify(logData, null, 2));
 
         // 常に新規作成（重複チェック無し）
         const savedLog = await entities.WorkLog.create(logData);
@@ -140,19 +146,24 @@ Deno.serve(async (req) => {
         console.log(`[${requestId}] [${step}] ✅ Created: ${savedLog.id}`);
       } catch (error) {
         console.error(`[${requestId}] [${step}] ❌ Failed:`, error.message);
+        console.error(`[${requestId}] [${step}] Full error:`, error);
         console.error(`[${requestId}] [${step}] Stack:`, error.stack);
+        
         errors.push({ 
           step,
           row_index: i,
-          row_data: { 
-            client_id: row.client_id, 
-            project_id: row.project_id,
-            work_category_id: row.work_category_id,
-            duration_minutes: row.duration_minutes
-          }, 
+          row_data: row,
+          payloadUsed: {
+            work_date,
+            user_email: userEmail,
+            work_category_id: normalizeId(row.work_category_id),
+            duration_minutes: Number(row.duration_minutes) || 0
+          },
           error: {
             message: error.message || String(error),
-            stack: error.stack
+            stack: error.stack || '',
+            type: error.constructor?.name || 'Unknown',
+            toString: String(error)
           }
         });
       }
@@ -180,9 +191,20 @@ Deno.serve(async (req) => {
 
     // 検証用：保存したユーザーの最新データを取得
     let verifyMineSample = [];
+    let verifyAllSample = [];
     let saved_this_call = savedIds.length;
+    
     try {
-      const latest = await entities.WorkLog.list("-created_date", 20);
+      const latest = await entities.WorkLog.list("-created_date", 10);
+      verifyAllSample = latest.map(log => ({
+        id: log.id,
+        work_date: log.work_date,
+        user_email: log.user_email,
+        duration_minutes: log.duration_minutes,
+        status: log.status,
+        created_date: log.created_date
+      }));
+      
       const mine = latest.filter(r => r.user_email === userEmail);
       verifyMineSample = mine.slice(0, 3).map(log => ({
         id: log.id,
@@ -192,9 +214,11 @@ Deno.serve(async (req) => {
         status: log.status,
         created_date: log.created_date
       }));
+      
+      console.log(`[${requestId}] 🔍 Verify all sample (${latest.length} total):`, verifyAllSample);
       console.log(`[${requestId}] 🔍 Verify mine sample (${mine.length} total):`, verifyMineSample);
     } catch (error) {
-      console.error(`[${requestId}] ⚠️ Failed to fetch verify mine sample:`, error.message);
+      console.error(`[${requestId}] ⚠️ Failed to fetch verify sample:`, error.message);
     }
 
     // saved_count が 0 なら success: false にする
@@ -212,12 +236,13 @@ Deno.serve(async (req) => {
       saved_this_call,
       deleted_count: 0,
       created_ids: savedIds,
-      verifySample,
+      verifyAllSample,
       verifyMineSample,
       errors: errors.length > 0 ? errors : undefined,
       _debug: {
         work_date,
         user_email: userEmail,
+        user_name: userName,
         department_code: departmentCode,
         is_impersonated: impersonate_user_email ? true : false,
         impersonate_user_email: impersonate_user_email || null,
@@ -225,7 +250,8 @@ Deno.serve(async (req) => {
       }
     };
 
-    return Response.json(response, { status: isSuccess ? 200 : 500 });
+    // ステータスコードは常に200で返す（axiosのcatch回避）
+    return Response.json(response, { status: 200 });
 
   } catch (error) {
     const step = "top_level_error";
