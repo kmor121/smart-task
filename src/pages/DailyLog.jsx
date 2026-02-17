@@ -139,8 +139,19 @@ export default function DailyLog() {
   }, [user?.email]);
 
   // 既存ログが変わったらrowsを更新（正規化処理を追加）
+  // ⚠️ 初回のみ実行するようにガード
+  const rowsInitializedRef = React.useRef(false);
+  
   useEffect(() => {
+    if (rowsInitializedRef.current) {
+      console.log(`[DailyLog] Skipping rows update (already initialized)`);
+      return;
+    }
+    
+    console.log(`[DailyLog] Initializing rows from existingLogs:`, existingLogs.length);
+    
     if (existingLogs.length > 0) {
+      rowsInitializedRef.current = true;
       setRows(existingLogs.map(log => {
         // project_id と client_id を正規化（""に統一）
         const normalizeId = (id) => {
@@ -165,13 +176,19 @@ export default function DailyLog() {
           status: log.status || "下書き",
         };
       }));
-    } else {
+    } else if (!rowsInitializedRef.current) {
+      rowsInitializedRef.current = true;
       setRows([emptyRow()]);
     }
   }, [existingLogs]);
 
   const handleRowChange = (index, updated) => {
-    setRows(prev => prev.map((r, i) => (i === index ? updated : r)));
+    console.log(`[DailyLog] handleRowChange(${index})`, { updated });
+    setRows(prev => {
+      const newRows = prev.map((r, i) => (i === index ? updated : r));
+      console.log(`[DailyLog] New rows state:`, newRows);
+      return newRows;
+    });
     setHasLocalChanges(true);
   };
 

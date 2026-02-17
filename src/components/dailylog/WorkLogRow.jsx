@@ -20,7 +20,11 @@ export default function WorkLogRow({
   canManageProjects,
   onEditProject
 }) {
+  const [lastClientSelected, setLastClientSelected] = React.useState("");
+  const [lastProjectSelected, setLastProjectSelected] = React.useState("");
+
   const handleChange = (field, value) => {
+    console.log(`[WorkLogRow ${index}] handleChange called`, { field, value, before_client: row.client_id, before_project: row.project_id });
     const updated = { ...row, [field]: value };
 
     // 顧客変更時
@@ -33,7 +37,8 @@ export default function WorkLogRow({
       updated.project_id = "";
       updated.project_name = "";
       updated.is_temporary_project = false;
-      console.log("✅ Client selected:", clientId, client?.name);
+      setLastClientSelected(clientId);
+      console.log(`[WorkLogRow ${index}] ✅ Client selected:`, clientId, client?.name);
     }
 
     // 案件変更時
@@ -53,7 +58,8 @@ export default function WorkLogRow({
           updated.client_name = project.client_name || updated.client_name;
           updated.client_id = project.client_id ? String(project.client_id) : updated.client_id;
           updated.is_temporary_project = project.status === "仮案件";
-          console.log("✅ Project selected:", projectId, project.name);
+          setLastProjectSelected(projectId);
+          console.log(`[WorkLogRow ${index}] ✅ Project selected:`, projectId, project.name);
         } else {
           // 存在しない場合はクリア
           updated.project_id = "";
@@ -71,6 +77,7 @@ export default function WorkLogRow({
     }
 
     onChange(index, updated);
+    console.log(`[WorkLogRow ${index}] onChange called with:`, updated);
   };
 
   // アクティブな顧客のみ
@@ -100,12 +107,13 @@ export default function WorkLogRow({
   const isClientInvalid = isSales && !row.client_id;
 
   // 無効な project_id を自動的にクリア（顧客変更時または案件が無効になった時）
-  useEffect(() => {
-    if (normalizedProjectId && !isSelectedInOptions && row.client_id) {
-      console.log("Auto-clearing invalid project_id:", normalizedProjectId);
-      handleChange("project_id", "");
-    }
-  }, [row.client_id, normalizedProjectId, isSelectedInOptions]);
+  // ⚠️ このuseEffectが選択を上書きしている可能性があるため、一旦コメントアウト
+  // useEffect(() => {
+  //   if (normalizedProjectId && !isSelectedInOptions && row.client_id) {
+  //     console.log("Auto-clearing invalid project_id:", normalizedProjectId);
+  //     handleChange("project_id", "");
+  //   }
+  // }, [row.client_id, normalizedProjectId, isSelectedInOptions]);
 
   // 部署コード正規化（design→production, print→printing）
   const DEPT_ALIAS = { design: 'production', print: 'printing' };
@@ -126,6 +134,14 @@ export default function WorkLogRow({
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         )}
+      </div>
+
+      {/* デバッグ情報表示 */}
+      <div className="bg-amber-50 border border-amber-200 rounded p-2 text-[10px] font-mono space-y-0.5">
+        <div className="font-semibold text-amber-800">🔍 Debug Info:</div>
+        <div>row.client_id: "{String(row.client_id || "")}" (last: "{lastClientSelected}")</div>
+        <div>row.project_id: "{String(row.project_id || "")}" (last: "{lastProjectSelected}")</div>
+        <div>Select value: client="{String(row.client_id || "")}" project="{String(currentProjectValue)}"</div>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
