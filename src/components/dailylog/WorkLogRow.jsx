@@ -135,18 +135,15 @@ export default function WorkLogRow({
             顧客 {isSales && <span className="text-red-400">*</span>}
           </label>
           <Select 
-            value={row.client_id || ""} 
-            onValueChange={v => {
-              handleChange("client_id", v || "");
-            }}
+            value={String(row.client_id || "")} 
+            onValueChange={(v) => handleChange("client_id", v)}
           >
             <SelectTrigger className={`h-9 text-sm ${isClientInvalid ? "border-red-300 bg-red-50" : ""}`}>
               <SelectValue placeholder="顧客を選択" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={null}>— 選択してください —</SelectItem>
               {filteredClients.map(c => (
-                <SelectItem key={c.id} value={c.id}>
+                <SelectItem key={c.id} value={String(c.id)}>
                   {c.name}
                 </SelectItem>
               ))}
@@ -163,8 +160,8 @@ export default function WorkLogRow({
             )}
           </label>
           <Select 
-            value={currentProjectValue} 
-            onValueChange={v => handleChange("project_id", v || "")}
+            value={String(currentProjectValue)} 
+            onValueChange={(v) => handleChange("project_id", v)}
             disabled={!row.client_id}
           >
             <SelectTrigger className={`h-9 text-sm ${
@@ -174,7 +171,6 @@ export default function WorkLogRow({
               <SelectValue placeholder={row.client_id ? "案件を選択" : "顧客を選択してください"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={null}>— 選択してください —</SelectItem>
               {filteredProjects.length === 0 ? (
                 <div className="px-2 py-6 text-center text-sm text-slate-400">
                   該当する案件がありません
