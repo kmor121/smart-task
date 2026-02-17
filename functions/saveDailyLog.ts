@@ -1,24 +1,16 @@
-// @ts-nocheck
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // deno-lint-ignore-file no-explicit-any
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.6";
 
 function json(payload, status = 200) {
   return new Response(JSON.stringify(payload), {
     status,
-    headers: { 'content-type': 'application/json' },
+    headers: { "content-type": "application/json" },
   });
 }
 
 function isObj(v) {
-  return !!v && typeof v === 'object' && !Array.isArray(v);
-}
-
-function parseJsonMaybe(v) {
-  if (typeof v === 'string') {
-    try { return JSON.parse(v); } catch { return v; }
-  }
-  return v;
+  return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
 function asArray(v) {
@@ -29,205 +21,222 @@ function asArray(v) {
 }
 
 function normalizeDate(d) {
-  const s = String(d ?? '').trim();
-  if (!s) return '';
+  if (!d) return "";
+  const s = String(d);
   return s.length >= 10 ? s.slice(0, 10) : s;
 }
 
-function normalizeStatus(raw) {
-  const s = String(raw ?? '').trim();
-  if (!s) return '下書き';
-  if (s.includes('提出')) return '提出済';
-  if (s.includes('下書')) return '下書き';
-  if (s === '提出済' || s === '下書き') return s;
-  return s;
+function normalizeBool(v) {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "number") return v !== 0;
+  if (typeof v === "string") return ["true", "1", "yes", "on"].includes(v.toLowerCase());
+  return false;
 }
 
 function toInt(v) {
-  const n = Number.parseInt(String(v ?? ''), 10);
-  return Number.isFinite(n) ? n : NaN;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.trunc(n) : NaN;
 }
 
-function compact(obj) {
-  const o = {};
-  for (const k of Object.keys(obj)) {
-    const val = obj[k];
-    if (val !== undefined && val !== null) o[k] = val;
-  }
-  return o;
+// ★重要：DBの実値に合わせる（提出ボタン/下書き保存に合わせる）
+function normalizeStatus(raw) {
+  const s = String(raw ?? "").trim();
+  if (!s) return "下書き";
+  if (s === "submitted") return "提出済";
+  if (s === "draft") return "下書き";
+  if (s.includes("提出")) return "提出済";
+  if (s.includes("下書")) return "下書き";
+  return s;
+}
+
+function pickStr(obj, key) {
+  if (!isObj(obj)) return null;
+  const v = obj[key];
+  if (v == null) return null;
+  if (typeof v === "string" && v.trim() !== "") return v;
+  if (typeof v === "number") return String(v);
+  return null;
 }
 
 function errInfo(e) {
-  if (e && typeof e === 'object') {
-    return {
-      message: String(e.message ?? e.toString?.() ?? e),
-      stack: e.stack ? String(e.stack) : null,
-    };
-  }
-  return { message: String(e), stack: null };
+  return {
+    message: e?.message ?? String(e),
+    stack: e?.stack ?? null,
+    response_status: e?.response?.status ?? null,
+    response_data: e?.response?.data ?? null,
+  };
 }
 
 Deno.serve(async (req) => {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  let step = 'start';
+  let step = "start";
 
   try {
     const base44 = createClientFromRequest(req);
 
-    step = 'auth';
+    step = "auth";
     const user = await base44.auth.me();
     if (!user) {
-      return json({ success: false, requestId, step, error: '認証が必要です' }, 200);
+      return json({ success: false, requestId, step, error: "認証が必要です" });
     }
 
-    step = 'parseBody';
-    let body = await req.json();
-    body = parseJsonMaybe(body);
+    step = "parseBody";
+    let body = null;
+    try {
+      body = await req.json();
+    } catch {
+      body = null;
+    }
     if (!isObj(body)) {
-      return json({ success: false, requestId, step, error: 'リクエストJSONが不正です', body }, 200);
+      return json({ success: false, requestId, step, error: "リクエストJSONが不正です", bodyType: typeof body });
     }
 
-    const work_date = normalizeDate(body.work_date ?? body.log_date ?? body.logDate ?? body.date);
+    const work_date = normalizeDate(body.work_date ?? body.date ?? body.log_date ?? body.logDate);
 
-    let rowsRaw = body.rows ?? body.items ?? body.entries ?? [];
-    rowsRaw = parseJsonMaybe(rowsRaw);
-    const rowsArr = Array.isArray(rowsRaw) ? rowsRaw : [rowsRaw];
+    const rowsIn = body.rows ?? body.items ?? body.entries ?? [];
+    const rowsArr = Array.isArray(rowsIn) ? rowsIn : [rowsIn];
 
+    // rows要素が JSON文字列で来ても復元
     const rows = rowsArr
-      .map((r) => parseJsonMaybe(r))
-      .map((r) => (typeof r === 'string' ? parseJsonMaybe(r) : r))
-      .filter((r) => isObj(r));
+      .map((r) => {
+        if (typeof r === "string") {
+          try { return JSON.parse(r); } catch { return null; }
+        }
+        return r;
+      })
+      .filter(isObj);
 
-    const impersonate_user_email =
-      typeof body.impersonate_user_email === 'string' ? body.impersonate_user_email : null;
+    const impersonate_user_email = typeof body.impersonate_user_email === "string" ? body.impersonate_user_email : null;
 
     if (!work_date || rows.length === 0) {
       return json({
         success: false,
         requestId,
-        step: 'validate',
-        error: 'work_date と rows（配列）が必要です（rows要素はobjectである必要があります）',
+        step: "validate",
+        error: "work_date と rows（配列）が必要です（rows要素はobjectである必要があります）",
         work_date,
         rows_in: rowsArr.length,
         rows_parsed: rows.length,
-        rows_sample_0: rowsArr[0] ?? null,
-      }, 200);
+      });
     }
 
-    step = 'writer';
-    const writer = (base44.asServiceRole && base44.asServiceRole.entities) ? base44.asServiceRole : base44;
+    // ★as any なし
+    const writer = base44.asServiceRole ? base44.asServiceRole : base44;
 
-    step = 'effectiveUser';
+    step = "effectiveUser";
     let effectiveUser = user;
-    const isAdmin = user.role === 'admin' || user.isAdmin === true || user.isOwner === true;
 
+    const isAdmin = user.role === "admin" || user.isAdmin === true || user.isOwner === true;
     if (impersonate_user_email && isAdmin) {
       try {
         const impRes = await writer.entities.User.filter({ email: impersonate_user_email });
         const impersonated = asArray(impRes);
         if (impersonated.length > 0) effectiveUser = impersonated[0];
-      } catch (e) {
-        // 失敗しても本処理は止めない
-        console.log('impersonate lookup failed:', errInfo(e).message);
+      } catch {
+        // 失敗しても保存は続行
       }
     }
 
-    const userEmail = String(effectiveUser.email ?? '');
-    const userName = String(effectiveUser.full_name ?? effectiveUser.name ?? userEmail.split('@')[0] ?? '');
-    const departmentCode = String(effectiveUser.department_code ?? '');
+    const userEmail = effectiveUser.email;
+    const userName = effectiveUser.full_name || effectiveUser.name || String(userEmail).split("@")[0];
+    const departmentCode = effectiveUser.department_code || "";
 
-    step = 'loadExisting';
-    let existingLogs = [];
+    // 既存取得は「失敗しても続行」（更新判定だけに使う）
+    step = "loadExisting";
+    let existingIds = [];
     let existingLoadError = null;
-
-    // ★ filter が落ちるケースがあるので list() で取って JS で絞る
     try {
-      const all = await writer.entities.WorkLog.list('-created_date', 5000, 0, ['id', 'work_date', 'user_email']);
-      existingLogs = asArray(all).filter((x) =>
-        isObj(x) &&
-        normalizeDate(x.work_date) === work_date &&
-        String(x.user_email ?? '') === userEmail
-      );
+      const existingRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
+      const existingLogs = asArray(existingRes);
+      existingIds = existingLogs.map((l) => l?.id).filter((id) => typeof id === "string");
     } catch (e) {
-      existingLoadError = errInfo(e).message;
-      existingLogs = [];
+      existingLoadError = errInfo(e);
+      existingIds = [];
     }
 
-    const existingIds = existingLogs.map((x) => x.id).filter(Boolean);
-
-    step = 'saveRows';
     const savedIds = [];
     const errors = [];
 
+    step = "saveRows";
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
 
-      const work_category_id =
-        row.work_category_id ?? row.workCategoryId ?? row.work_category ?? row.category_id ?? null;
+      const workCategoryId =
+        pickStr(row, "work_category_id") ||
+        pickStr(row, "workCategoryId") ||
+        pickStr(row, "category_id") ||
+        pickStr(row, "work_category");
 
-      const duration_minutes = toInt(row.duration_minutes ?? row.minutes);
+      const duration = toInt(row.duration_minutes ?? row.minutes);
 
-      if (!work_category_id || !Number.isFinite(duration_minutes) || duration_minutes <= 0) {
-        continue;
-      }
-
-      const rowId = typeof row.id === 'string' ? row.id : null;
-      const op = (rowId && existingIds.includes(rowId)) ? 'update' : 'create';
+      if (!workCategoryId || !Number.isFinite(duration) || duration <= 0) continue;
 
       const status = normalizeStatus(row.status);
+      const rowId = typeof row.id === "string" ? row.id : null;
 
-      const logData = compact({
+      const logData = {
         work_date,
         user_email: userEmail,
         user_name: userName,
         department_code: departmentCode,
 
-        client_id: row.client_id ?? '',
-        client_name: row.client_name ?? '',
-        project_id: row.project_id ?? '',
-        project_name: row.project_name ?? '',
-        is_temporary_project: !!row.is_temporary_project,
+        client_id: pickStr(row, "client_id"),
+        client_name: pickStr(row, "client_name"),
+        project_id: pickStr(row, "project_id"),
+        project_name: pickStr(row, "project_name"),
 
-        work_category_id: String(work_category_id),
-        work_category_name: row.work_category_name ?? '',
-        is_revision: !!row.is_revision,
+        is_temporary_project: normalizeBool(row.is_temporary_project),
+        work_category_id: String(workCategoryId),
+        work_category_name: pickStr(row, "work_category_name"),
+        is_revision: normalizeBool(row.is_revision),
 
-        duration_minutes,
-        description: row.description ?? '',
-        status, // 「下書き」 or 「提出済」
-      });
+        duration_minutes: duration,
+        description: typeof row.description === "string" ? row.description : (typeof row.memo === "string" ? row.memo : ""),
+
+        // ★必ず日本語の値に寄せる
+        status,
+        submitted_at: status === "提出済" ? new Date().toISOString() : null,
+      };
+
+      const op = rowId && existingIds.includes(rowId) ? "update" : "create";
 
       try {
-        let saved;
-        if (op === 'update') {
+        let saved = null;
+        if (op === "update") {
           saved = await writer.entities.WorkLog.update(rowId, logData);
           savedIds.push(rowId);
         } else {
           saved = await writer.entities.WorkLog.create(logData);
-          if (saved && saved.id) savedIds.push(saved.id);
+          if (saved && typeof saved.id === "string") savedIds.push(saved.id);
         }
       } catch (e) {
         const info = errInfo(e);
+
+        // ★DailyLog.jsが表示できる形に寄せる（複数キーで持たせる）
         errors.push({
           index: i,
-          row_id: rowId ?? `row_${i}`,
           op,
-          error: info.message,
-          stack: info.stack,
+          row_id: rowId ?? `row_${i}`,
+          errorMessage: info.message,
+          errorStack: info.stack,
+          response_status: info.response_status,
+          response_data: info.response_data,
           data: logData,
         });
       }
     }
 
-    const success = errors.length === 0;
+    step = "done";
+    const saved_count = savedIds.length;
+    const success = saved_count > 0 && errors.length === 0;
 
     return json({
       success,
       requestId,
-      step: 'done',
-      saved_count: savedIds.length,
+      step,
+      saved_count,
       deleted_count: 0,
-      error: success ? undefined : `保存中にエラーが発生しました（${errors.length}件）`,
+      error: success ? undefined : `保存中にエラーが発生しました (${errors.length}件)`,
       errors: errors.length ? errors : undefined,
       _debug: {
         work_date,
@@ -235,12 +244,11 @@ Deno.serve(async (req) => {
         department_code: departmentCode,
         rows_in: rowsArr.length,
         rows_parsed: rows.length,
-        existing_loaded: existingLogs.length,
+        is_admin: isAdmin,
+        impersonate_user_email,
         existingLoadError,
-        impersonate_user_email: impersonate_user_email ?? null,
       },
-    }, 200);
-
+    });
   } catch (e) {
     const info = errInfo(e);
     return json({
@@ -248,7 +256,9 @@ Deno.serve(async (req) => {
       requestId,
       step,
       error: info.message,
-      errors: [{ index: -1, row_id: 'fatal', op: 'fatal', error: info.message, stack: info.stack }],
-    }, 200);
+      errorStack: info.stack,
+      response_status: info.response_status,
+      response_data: info.response_data,
+    });
   }
 });
