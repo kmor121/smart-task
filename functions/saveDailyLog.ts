@@ -63,30 +63,8 @@ Deno.serve(async (req) => {
       is_impersonated: impersonate_user_email ? true : false
     });
 
-    // 既存の日報を取得（暫定：エラーが出ても処理続行）
-    console.log(`[${requestId}] 🔍 Fetching existing logs for user: ${userEmail}, date: ${work_date}...`);
-    
-    let existingLogs = [];
-    let existingIds = [];
-    
-    try {
-      // list() には引数を一切渡さない（引数なし or sortのみ）
-      const allLogs = await base44.asServiceRole.entities.WorkLog.list();
-      console.log(`[${requestId}] 📊 Total logs fetched: ${allLogs.length}`);
-      
-      // JavaScript で絞り込み
-      existingLogs = allLogs.filter(log => 
-        log.work_date === work_date && log.user_email === userEmail
-      );
-      existingIds = existingLogs.map(log => log.id);
-      console.log(`[${requestId}] 📋 Existing logs for this date/user: ${existingLogs.length}`);
-    } catch (error) {
-      console.error(`[${requestId}] ⚠️ Failed to fetch existing logs (continuing anyway):`, error.message);
-      console.error(`[${requestId}] Error stack:`, error.stack);
-      // エラーが出ても処理続行（既存ログなしとして扱う）
-      existingLogs = [];
-      existingIds = [];
-    }
+    // 既存ログ取得は一旦スキップ（重複チェック無し、常に create）
+    console.log(`[${requestId}] ⚠️ Skipping existing log check - will create all rows as new`);
 
     const savedIds = [];
     const errors = [];
@@ -100,10 +78,29 @@ Deno.serve(async (req) => {
       return String(id);
     };
 
-    // 各行を保存
+    // service role 優先で entities にアクセス
+    const client = (base44 as any).asServiceRole ?? base44;
+    const entities = client.entities;
+
+    // entities.WorkLog が存在するかチェック
+    if (!entities || !entities.WorkLog) {
+      console.error(`[${requestId}] ❌ entities.WorkLog is undefined`);
+      console.error(`[${requestId}] Available entities:`, Object.keys(entities || {}));
+      return Response.json({
+        success: false,
+        requestId,
+        step: "entityMissing",
+        error: {
+          message: "entities.WorkLog が見つかりません",
+          available_entities: Object.keys(entities || {})
+        }
+      }, { status: 500 });
+    }
+
+    // 各行を保存（create のみ）
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const step = `save_row_${i}`;
+      const step = `create_row_${i}`;
       
       try {
         if (!row.work_category_id || !row.duration_minutes) {
@@ -130,27 +127,17 @@ Deno.serve(async (req) => {
           submitted_at: row.submitted_at || null
         };
         
-        console.log(`[${requestId}] [${step}] 💾 Saving:`, {
+        console.log(`[${requestId}] [${step}] 💾 Creating new log:`, {
           client_id: logData.client_id,
           project_id: logData.project_id,
           work_category_id: logData.work_category_id,
           duration_minutes: logData.duration_minutes
         });
 
-        let savedLog;
-        if (row.id && existingIds.includes(row.id)) {
-          // 既存ログを更新
-          console.log(`[${requestId}] [${step}] 🔄 Updating log ${row.id}...`);
-          savedLog = await base44.asServiceRole.entities.WorkLog.update(row.id, logData);
-          savedIds.push(row.id);
-          console.log(`[${requestId}] [${step}] ✅ Updated: ${savedLog.id}`);
-        } else {
-          // 新規作成
-          console.log(`[${requestId}] [${step}] 🆕 Creating new log...`);
-          savedLog = await base44.asServiceRole.entities.WorkLog.create(logData);
-          savedIds.push(savedLog.id);
-          console.log(`[${requestId}] [${step}] ✅ Created: ${savedLog.id}`);
-        }
+        // 常に新規作成（重複チェック無し）
+        const savedLog = await entities.WorkLog.create(logData);
+        savedIds.push(savedLog.id);
+        console.log(`[${requestId}] [${step}] ✅ Created: ${savedLog.id}`);
       } catch (error) {
         console.error(`[${requestId}] [${step}] ❌ Failed:`, error.message);
         console.error(`[${requestId}] [${step}] Stack:`, error.stack);
@@ -171,21 +158,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 削除された行（既存にあるが今回の保存対象にない）を削除
-    const idsToDelete = existingIds.filter(id => !savedIds.includes(id));
-    console.log(`[${requestId}] 🗑️  Deleting ${idsToDelete.length} logs...`);
-    for (const id of idsToDelete) {
-      try {
-        await base44.asServiceRole.entities.WorkLog.delete(id);
-        console.log(`[${requestId}] ✅ Deleted log: ${id}`);
-      } catch (error) {
-        console.error(`[${requestId}] ❌ Failed to delete log ${id}:`, error);
-      }
-    }
+    // 削除処理はスキップ（既存チェックをしていないため）
+    console.log(`[${requestId}] ⚠️ Skipping deletion (no existing log check)`);
 
     console.log(`[${requestId}] ✅ Save complete:`, {
-      saved: savedIds.length,
-      deleted: idsToDelete.length,
+      created: savedIds.length,
       errors: errors.length
     });
 
@@ -193,14 +170,15 @@ Deno.serve(async (req) => {
       success: true,
       requestId,
       saved_count: savedIds.length,
-      deleted_count: idsToDelete.length,
+      deleted_count: 0,
       errors: errors.length > 0 ? errors : undefined,
       _debug: {
         work_date,
         user_email: userEmail,
         department_code: departmentCode,
         is_impersonated: impersonate_user_email ? true : false,
-        impersonate_user_email: impersonate_user_email || null
+        impersonate_user_email: impersonate_user_email || null,
+        note: "既存ログチェック無効化中（create のみ）"
       }
     };
 
