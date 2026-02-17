@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
     }
 
     // service role（書き込み＆管理者検索用）
-    const writer = base44.asServiceRole ? base44.asServiceRole : base44;
+    const writer = (/** @type {any} */ (base44)).asServiceRole ?? base44;
 
     step = 'effectiveUser';
     let effectiveUser = user;
