@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// deno-lint-ignore-file no-explicit-any
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 function jsonResponse(payload, status = 200) {
@@ -166,24 +168,8 @@ Deno.serve(async (req) => {
     });
 
     step = 'loadExisting';
-    let existingLogs = [];
-    let existingLoadError = null;
-    
-    try {
-      // list→JS絞り込みに切り替え（filter が例外を投げる可能性があるため）
-      const allRes = await writer.entities.WorkLog.list('-work_date', 5000);
-      const all = asArray(allRes).filter(isRecord);
-      existingLogs = all.filter(l => 
-        normalizeDate(l.work_date) === work_date && 
-        l.user_email === userEmail
-      );
-      console.log(`✅ Loaded ${existingLogs.length} existing logs for ${work_date} / ${userEmail}`);
-    } catch (e) {
-      const info = getErrorInfo(e);
-      existingLoadError = { message: info.message, stack: info.stack };
-      console.warn(`⚠️ Failed to load existing logs, continuing with create-only mode:`, info.message);
-      existingLogs = [];
-    }
+    const existingRes = await writer.entities.WorkLog.filter({ work_date, user_email: userEmail });
+    const existingLogs = asArray(existingRes).filter(isRecord);
 
     const existingIds = existingLogs
       .map((log) => (typeof log.id === 'string' ? log.id : null))
@@ -217,16 +203,16 @@ Deno.serve(async (req) => {
         work_date,
         user_email: userEmail,
         user_name: userName,
-        department_code: departmentCode || '',
+        department_code: departmentCode,
 
-        client_id: pickString(row, ['client_id']) || '',
-        client_name: pickString(row, ['client_name']) || '',
-        project_id: pickString(row, ['project_id']) || '',
-        project_name: pickString(row, ['project_name']) || '',
+        client_id: pickString(row, ['client_id']) ?? null,
+        client_name: pickString(row, ['client_name']) ?? null,
+        project_id: pickString(row, ['project_id']) ?? null,
+        project_name: pickString(row, ['project_name']) ?? null,
 
         is_temporary_project: normalizeBool(row.is_temporary_project),
         work_category_id: String(workCategoryId),
-        work_category_name: pickString(row, ['work_category_name']) || '',
+        work_category_name: pickString(row, ['work_category_name']) ?? null,
         is_revision: normalizeBool(row.is_revision),
 
         duration_minutes: duration,
@@ -239,29 +225,28 @@ Deno.serve(async (req) => {
       try {
         let savedLog;
 
-        // デバッグ優先：update/delete は使わず「常に create」
-        step = 'create';
-        savedLog = await writer.entities.WorkLog.create(logData);
-        if (isRecord(savedLog) && typeof savedLog.id === 'string') savedIds.push(savedLog.id);
+        if (rowId && existingIds.includes(rowId)) {
+          step = 'update';
+          savedLog = await writer.entities.WorkLog.update(rowId, logData);
+          savedIds.push(rowId);
+        } else {
+          step = 'create';
+          savedLog = await writer.entities.WorkLog.create(logData);
+          if (isRecord(savedLog) && typeof savedLog.id === 'string') savedIds.push(savedLog.id);
+        }
 
         console.log(`✅ Saved log: ${isRecord(savedLog) ? savedLog.id : '(no id)'}`);
       } catch (e) {
-        const err = e instanceof Error ? e : null;
-        const errorMsg = err?.message ?? String(e);
-        console.error('❌ Failed to save log:', errorMsg);
+        const info = getErrorInfo(e);
+        console.error('❌ Failed to save log:', info.message);
 
         errors.push({
           index: i,
-          row_index: i,
-          row_no: i,
-          rowId: rowId ?? `create_row_${i}`,
-          step: step,
-          error: { message: errorMsg, stack: err?.stack ?? null },
-          message: errorMsg,
-          errorMessage: errorMsg,
-          row_data: logData,
-          row: row,
-          payload: logData
+          row_id: rowId ?? `row_${i}`,
+          errorMessage: info.message,
+          errorStack: info.stack,
+          payloadUsed: logData,
+          rowType: typeof row,
         });
       }
     }
@@ -270,7 +255,7 @@ Deno.serve(async (req) => {
     const idsToDelete = [];
 
     const savedCount = savedIds.length;
-    const success = savedCount > 0;
+    const success = savedCount > 0 && errors.length === 0;
 
     step = 'verify';
     let verifySample = [];
@@ -286,8 +271,7 @@ Deno.serve(async (req) => {
       requestId,
       saved_count: savedCount,
       deleted_count: idsToDelete.length,
-      errors: errors.length > 0 ? errors : [],
-      error: !success ? `保存中にエラーが発生しました（${errors.length}件）` : undefined,
+      errors: errors.length ? errors : undefined,
       verifySample,
       _debug: {
         stepEnd: step,
@@ -297,8 +281,6 @@ Deno.serve(async (req) => {
         rows_in: rowsArr.length,
         rows_parsed: rows.length,
         impersonate_user_email: impersonate_user_email ?? null,
-        existingLoadError: existingLoadError,
-        existing_count: existingLogs.length,
       },
     });
   } catch (e) {
