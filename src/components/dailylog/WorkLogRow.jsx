@@ -25,31 +25,35 @@ export default function WorkLogRow({
 
     // 顧客変更時
     if (field === "client_id") {
-      const client = clients.find(c => c.id === value);
+      const clientId = String(value || "");
+      const client = clients.find(c => String(c.id) === clientId);
+      updated.client_id = clientId;
       updated.client_name = client?.name || "";
-      updated.client_id = value || "";
       // 顧客変更時は必ず案件をクリア
       updated.project_id = "";
       updated.project_name = "";
       updated.is_temporary_project = false;
+      console.log("✅ Client selected:", clientId, client?.name);
     }
 
     // 案件変更時
     if (field === "project_id") {
-      if (!value || value === "") {
+      const projectId = String(value || "");
+      if (!projectId) {
         // クリア時
         updated.project_id = "";
         updated.project_name = "";
         updated.is_temporary_project = false;
       } else {
         // 選択時（必ず文字列で保存）
-        const project = projects.find(p => p.id === String(value));
+        const project = projects.find(p => String(p.id) === projectId);
         if (project) {
-          updated.project_id = String(project.id);
+          updated.project_id = projectId;
           updated.project_name = project.name;
           updated.client_name = project.client_name || updated.client_name;
           updated.client_id = project.client_id ? String(project.client_id) : updated.client_id;
           updated.is_temporary_project = project.status === "仮案件";
+          console.log("✅ Project selected:", projectId, project.name);
         } else {
           // 存在しない場合はクリア
           updated.project_id = "";

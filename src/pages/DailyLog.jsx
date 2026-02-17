@@ -586,6 +586,21 @@ export default function DailyLog() {
               <div>projects_count: {projects.length} {projectsLoading && "⏳"} {(projectsError || !projectsData?.success) && "❌"}</div>
               <div>work_categories_count: {workCategories.length}</div>
               
+              {/* 選択中の値をデバッグ表示 */}
+              {rows.length > 0 && rows[0].client_id && (
+                <div className="mt-2 pt-2 border-t border-blue-200">
+                  <div className="text-green-600">✅ 選択中:</div>
+                  <div>client_id: {rows[0].client_id}</div>
+                  <div>client_name: {rows[0].client_name}</div>
+                  {rows[0].project_id && (
+                    <>
+                      <div>project_id: {rows[0].project_id}</div>
+                      <div>project_name: {rows[0].project_name}</div>
+                    </>
+                  )}
+                </div>
+              )}
+              
               {clientsData?._debug && (
                 <details className="mt-2">
                   <summary className="cursor-pointer text-blue-600">🔍 Clients Debug</summary>
