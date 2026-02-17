@@ -217,16 +217,16 @@ Deno.serve(async (req) => {
         work_date,
         user_email: userEmail,
         user_name: userName,
-        department_code: departmentCode,
+        department_code: departmentCode || '',
 
-        client_id: pickString(row, ['client_id']) ?? null,
-        client_name: pickString(row, ['client_name']) ?? null,
-        project_id: pickString(row, ['project_id']) ?? null,
-        project_name: pickString(row, ['project_name']) ?? null,
+        client_id: pickString(row, ['client_id']) || '',
+        client_name: pickString(row, ['client_name']) || '',
+        project_id: pickString(row, ['project_id']) || '',
+        project_name: pickString(row, ['project_name']) || '',
 
         is_temporary_project: normalizeBool(row.is_temporary_project),
         work_category_id: String(workCategoryId),
-        work_category_name: pickString(row, ['work_category_name']) ?? null,
+        work_category_name: pickString(row, ['work_category_name']) || '',
         is_revision: normalizeBool(row.is_revision),
 
         duration_minutes: duration,
@@ -246,16 +246,14 @@ Deno.serve(async (req) => {
 
         console.log(`✅ Saved log: ${isRecord(savedLog) ? savedLog.id : '(no id)'}`);
       } catch (e) {
-        const info = getErrorInfo(e);
-        console.error('❌ Failed to save log:', info.message);
+        const err = e instanceof Error ? e : null;
+        console.error('❌ Failed to save log:', err?.message ?? String(e));
 
         errors.push({
-          index: i,
-          row_id: rowId ?? `row_${i}`,
-          errorMessage: info.message,
-          errorStack: info.stack,
-          payloadUsed: logData,
-          rowType: typeof row,
+          row: { ...(row ?? {}), id: row?.id ?? `create_row_${i}` },
+          error: err?.message ?? String(e),
+          stack: err?.stack ?? null,
+          data: logData
         });
       }
     }
@@ -264,7 +262,7 @@ Deno.serve(async (req) => {
     const idsToDelete = [];
 
     const savedCount = savedIds.length;
-    const success = savedCount > 0 && errors.length === 0;
+    const success = savedCount > 0;
 
     step = 'verify';
     let verifySample = [];
