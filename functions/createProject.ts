@@ -39,54 +39,56 @@ Deno.serve(async (req) => {
     }
 
     // 顧客を取得 or 検索 or 作成
-    let client = null;
-    if (clientIdStr) {
+    let clientId = clientIdStr;
+    let clientName = inputClientName ? inputClientName.trim() : '';
+
+    if (!clientName && clientIdStr) {
       try {
-        client = await base44.asServiceRole.entities.Client.get(clientIdStr);
-        console.log('Found client by ID:', client?.id, client?.name);
+        const client = await base44.asServiceRole.entities.Client.get(clientIdStr);
+        clientName = client?.name || '';
+        console.log('Found client by ID:', clientIdStr, clientName);
       } catch (e) {
         console.warn('Client.get failed:', e.message);
       }
-    }
-    if (!client && inputClientName) {
+    } else if (!clientIdStr && inputClientName) {
       const allClients = await base44.asServiceRole.entities.Client.list();
       const arr = Array.isArray(allClients) ? allClients : [];
-      console.log('All clients count:', arr.length);
-      client = arr.find(c => c.name === inputClientName.trim()) || null;
-      if (!client) {
-        client = await base44.asServiceRole.entities.Client.create({
+      const found = arr.find(c => c.name === inputClientName.trim());
+      if (found) {
+        clientId = strId(found.id);
+        clientName = found.name;
+        console.log('Found client by name:', clientId, clientName);
+      } else {
+        const newClient = await base44.asServiceRole.entities.Client.create({
           name: inputClientName.trim(),
           is_active: true
         });
-        console.log('New client created:', client.id, client.name);
+        clientId = strId(newClient.id);
+        clientName = newClient.name;
+        console.log('Created new client:', clientId, clientName);
       }
-    }
-    if (!client) {
-      return Response.json({ error: '顧客が見つかりません' }, { status: 404 });
     }
 
     const name = `${project_date}　${project_title}`;
-    const resolvedClientId = strId(client.id);
 
-    // 最小限のフィールドのみ（Relation フィールドなし）
+    // Project エンティティのスキーマ: client_id は type:string (Relation ではない)
+    // is_active も boolean フィールドとして存在する
+    // 最小限のフィールドのみで作成
     const projectData = {
       project_date,
       project_title,
       name,
-      client_name: client.name,
+      client_name: clientName,
       status: status || '仮案件',
-      is_active: true,
     };
 
-    console.log('Creating project with data:', JSON.stringify(projectData));
+    if (clientId) {
+      projectData.client_id = clientId;
+    }
+
+    console.log('Creating project:', JSON.stringify(projectData));
 
     const project = await base44.asServiceRole.entities.Project.create(projectData);
-    // 返却値の client_id を文字列に正規化
-    if (project && typeof project.client_id === 'object' && project.client_id !== null) {
-      project.client_id = project.client_id.id ?? resolvedClientId;
-    } else if (!project.client_id) {
-      project.client_id = resolvedClientId;
-    }
 
     console.log('Project created:', JSON.stringify({
       id: project.id,
@@ -95,7 +97,14 @@ Deno.serve(async (req) => {
       client_name: project.client_name,
     }));
 
-    return Response.json({ success: true, project });
+    // フロントエンド用に client_id を文字列で返す
+    const returnProject = {
+      ...project,
+      client_id: strId(project.client_id) || clientId,
+      client_name: project.client_name || clientName,
+    };
+
+    return Response.json({ success: true, project: returnProject });
   } catch (error) {
     console.error('Project creation failed:', error.message);
     console.error('Error data:', JSON.stringify(error?.response?.data ?? null));
