@@ -94,14 +94,17 @@ export default function DailyLog() {
   const [selectedRowForNewProject, setSelectedRowForNewProject] = useState(null);
   const [lastSaveResult, setLastSaveResult] = useState(null);
 
-  // 既存のWorkLogsを読み込み
-  const { data: existingLogs = [], isLoading } = useQuery({
+  // 既存のWorkLogsを読み込み（staleTime=0で常に最新を取得）
+  const { data: existingLogs, isLoading } = useQuery({
     queryKey: ["workLogs", dateStr, user?.email],
     queryFn: async () => {
       const allLogs = await base44.entities.WorkLog.list('-created_date', 5000);
-      return allLogs.filter((l) => l.work_date === dateStr && l.user_email === user.email);
+      const filtered = allLogs.filter((l) => l.work_date === dateStr && l.user_email === user.email);
+      console.log("[DailyLog] existingLogs fetched:", filtered.length, filtered[0] ? JSON.stringify(filtered[0]) : "none");
+      return filtered;
     },
     enabled: !!user?.email,
+    staleTime: 0,
   });
 
   // データクリーンアップ（一度だけ実行）
