@@ -68,17 +68,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Project 作成: name (deprecated) と is_active は渡さない
+    // Project 作成: client_id・name・is_active は渡さない（Base44が型エラーを起こすため）
     const projectData = {
       project_date,
       project_title,
-      client_id: clientId || undefined,
       client_name: clientName,
       status: status || '仮案件',
     };
-
-    // client_id が null の場合はキーごと除外
-    if (!clientId) delete projectData.client_id;
 
     console.log('Creating project:', JSON.stringify(projectData));
 
