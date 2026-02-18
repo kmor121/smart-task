@@ -180,13 +180,16 @@ Deno.serve(async (req: Request) => {
 
       try {
         if (op === "update") {
-          await writer.entities.WorkLog.update(rowId, logData);
-          savedIds.push(rowId as string);
-        } else {
-          const saved = await writer.entities.WorkLog.create(logData);
-          console.log(`[saveDailyLog] row[${i}] create result:`, JSON.stringify(saved));
-          if (saved?.id) savedIds.push(String(saved.id));
-        }
+            console.log(`[saveDailyLog] UPDATE INPUT row[${i}]:`, JSON.stringify(logData));
+            const updateResult = await writer.entities.WorkLog.update(rowId, logData);
+            console.log(`[saveDailyLog] UPDATE RESULT row[${i}]:`, JSON.stringify(updateResult));
+            savedIds.push(rowId as string);
+          } else {
+            console.log(`[saveDailyLog] CREATE INPUT row[${i}]:`, JSON.stringify(logData));
+            const saved = await writer.entities.WorkLog.create(logData);
+            console.log(`[saveDailyLog] CREATE RESULT row[${i}]:`, JSON.stringify(saved));
+            if (saved?.id) savedIds.push(String(saved.id));
+          }
       } catch (e: any) {
         const info = fullErrInfo(e);
         console.error(`[saveDailyLog] row[${i}] ERROR:`, JSON.stringify(info));
