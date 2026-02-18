@@ -229,68 +229,57 @@ export default function DailyLog() {
       toast.error("日付を選択してください");
       return;
     }
-    if (!newProjectForm.client_name || !newProjectForm.project_title) {
-      toast.error("顧客名と案件名は必須です");
+    if (!newProjectForm.client_id) {
+      toast.error("顧客を選択してください");
       return;
     }
-
+    if (!newProjectForm.project_title) {
+      toast.error("案件名を入力してください");
+      return;
+    }
     if (selectedRowForNewProject === null) return;
 
     setSaving(true);
-      try {
-        const clientName = newProjectForm.client_name.trim();
-        const clientsArr = Array.isArray(clients) ? clients : [];
-        const existingClient = clientsArr.find(c => c.name === clientName);
+    try {
+      const selectedClient = clients.find(c => c.id === newProjectForm.client_id);
+      const clientName = selectedClient?.name || "";
+      const projectTitle = newProjectForm.project_title.trim();
 
-        // 案件を作成（顧客IDが不明な場合はバックエンドが顧客も作成する）
-        // 顧客が存在しない場合は先に作成
-              let finalClientId = existingClient?.id || null;
-              if (!finalClientId && clientName) {
-                const newClient = await base44.entities.Client.create({ name: clientName });
-                finalClientId = newClient.id;
-              }
+      const newProject = await base44.entities.Project.create({
+        project_date: newProjectForm.project_date,
+        project_title: projectTitle,
+        client_id: newProjectForm.client_id,
+        client_name: clientName,
+        status: "仮案件",
+      });
 
-              const projectTitle = newProjectForm.project_title.trim();
-              const projectData = {
-                project_date: newProjectForm.project_date,
-                project_title: projectTitle,
-                client_id: finalClientId || undefined,
-                client_name: clientName,
-                status: "仮案件",
-              };
-              console.log("Creating project (direct):", JSON.stringify(projectData));
+      const displayName = newProject.project_title || projectTitle;
+      const targetRowIndex = selectedRowForNewProject;
 
-              const newProject = await base44.entities.Project.create(projectData);
-              console.log("Project created:", JSON.stringify(newProject));
+      // 該当行に即時反映
+      handleRowChange(targetRowIndex, {
+        ...rows[targetRowIndex],
+        client_id: newProjectForm.client_id,
+        client_name: clientName,
+        project_id: String(newProject.id),
+        project_name: displayName,
+        is_temporary_project: true,
+      });
 
-              const targetRowIndex = selectedRowForNewProject;
-              const displayName = newProject.project_title || newProject.name || projectTitle;
+      // マスタデータを再取得
+      await queryClient.invalidateQueries({ queryKey: ['projects'] });
 
-              // 該当行に即時反映
-              handleRowChange(targetRowIndex, {
-                ...rows[targetRowIndex],
-                client_id: String(newProject.client_id || finalClientId || ""),
-                client_name: newProject.client_name || clientName,
-                project_id: String(newProject.id),
-                project_name: displayName,
-                is_temporary_project: true
-              });
-
-              // マスタデータを再取得
-              await queryClient.invalidateQueries({ queryKey: ['projects'] });
-              await queryClient.invalidateQueries({ queryKey: ['clients'] });
-
-              toast.success(`案件「${displayName}」を作成しました`);
-              setNewProjectDialogOpen(false);
-              setNewProjectForm({ client_name: "", project_date: "", project_title: "" });
-              setSelectedRowForNewProject(null);
-      } catch (error) {
-        console.error("❌ Failed to create project:", error);
-        const errorMsg = error.response?.data?.error || error.response?.data?.details || error.message || "作成できませんでした";
-        toast.error(`案件作成エラー: ${errorMsg}`);
-      } finally {
-        setSaving(false);
-      }
+      toast.success(`案件「${displayName}」を作成しました`);
+      setNewProjectDialogOpen(false);
+      setNewProjectForm({ client_id: "", project_date: "", project_title: "" });
+      setSelectedRowForNewProject(null);
+    } catch (error) {
+      console.error("❌ Failed to create project:", error);
+      const errorMsg = error.response?.data?.error || error.message || "作成できませんでした";
+      toast.error(`案件作成エラー: ${errorMsg}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const refreshProjects = async () => {
