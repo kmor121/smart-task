@@ -416,7 +416,11 @@ export default function DailyLog() {
       const payload = {
         work_date: dateStr,
         rows: rowsToSave,
-        ...(impersonateUserEmail ? { impersonate_user_email: impersonateUserEmail } : {}),
+        ...(impersonateUserEmail ? {
+          impersonate_user_email: impersonateUserEmail,
+          impersonate_user_name: impersonateUserData?.full_name || null,
+          impersonate_department_code: impersonateUserData?.department_code || null,
+        } : {}),
       };
 
       console.log("📤 Sending payload to saveDailyLog:", JSON.stringify(payload, null, 2));
