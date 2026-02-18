@@ -482,15 +482,11 @@ export default function DailyLog() {
   // 提出/再提出判定
   const [hasLocalChanges, setHasLocalChanges] = useState(false);
   useEffect(() => {
-    if (existingLogs.length > 0) {
-      setHasLocalChanges(false);
-    }
+    setHasLocalChanges(false);
   }, [existingLogs]);
   
   useEffect(() => {
-    if (existingLogs.length > 0) {
-      setHasLocalChanges(true);
-    }
+    setHasLocalChanges(true);
   }, [rows]);
   
   const isResubmit = isSubmitted && hasLocalChanges;
