@@ -32,12 +32,18 @@ export default function AdminData() {
 
   const { data: clients = [], isLoading: loadingClients } = useQuery({
     queryKey: ["clients"],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: async () => {
+      const res = await base44.entities.Client.list();
+      return Array.isArray(res) ? res : (res?.items ?? res?.data ?? []);
+    },
   });
 
   const { data: projects = [], isLoading: loadingProjects } = useQuery({
     queryKey: ["projects"],
-    queryFn: () => base44.entities.Project.list(),
+    queryFn: async () => {
+      const res = await base44.entities.Project.list();
+      return Array.isArray(res) ? res : (res?.items ?? res?.data ?? []);
+    },
   });
 
   const saveClientMutation = useMutation({
