@@ -436,6 +436,7 @@ export default function DailyLog() {
         queryClient.invalidateQueries({ queryKey: ["teamDailyLogs"] });
 
         if (isSubmit) {
+          toast.success(`日報を提出しました（${result.saved_count}件）`);
           setShowSuccessModal(true);
         } else {
           toast.success(`下書きを保存しました（${result.saved_count}件）`);
