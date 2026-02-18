@@ -84,7 +84,8 @@ export default function AdminData() {
 
   const resetDataMutation = useMutation({
     mutationFn: async ({ startDate, endDate }) => {
-      const logs = await base44.entities.WorkLog.filter({});
+      const res = await base44.entities.WorkLog.list('-created_date', 5000);
+      const logs = Array.isArray(res) ? res : (res?.items ?? res?.data ?? []);
       const toDelete = logs.filter(log => {
         if (startDate && log.work_date < startDate) return false;
         if (endDate && log.work_date > endDate) return false;
