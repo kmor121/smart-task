@@ -128,7 +128,7 @@ Deno.serve(async (req: Request) => {
       const isSubmit = strVal(row.status).includes("提出");
       const status = isSubmit ? "提出済" : "下書き";
 
-      // ベースデータ（Relation以外）
+      // ベースデータ（必須フィールド）
       const logData: Record<string, any> = {
         work_date,
         user_email: userEmail,
@@ -141,26 +141,24 @@ Deno.serve(async (req: Request) => {
         duration_minutes: duration,
         description: strVal(row.description || row.memo),
         status,
-        submitted_at: isSubmit ? new Date().toISOString() : null,
       };
 
-      // Relation フィールドは有効な文字列IDがある場合のみ含める
+      // submitted_at は提出時のみ含める（null を送らない）
+      if (isSubmit) {
+        logData.submitted_at = new Date().toISOString();
+      }
+
+      // Relation フィールドは有効な文字列IDがある場合のみ含める（null/空を送らない）
       const clientId = strId(row.client_id);
       if (clientId) {
         logData.client_id = clientId;
         logData.client_name = strVal(row.client_name);
-      } else {
-        logData.client_id = null;
-        logData.client_name = "";
       }
 
       const projectId = strId(row.project_id);
       if (projectId) {
         logData.project_id = projectId;
         logData.project_name = strVal(row.project_name);
-      } else {
-        logData.project_id = null;
-        logData.project_name = "";
       }
 
       const op = rowId ? "update" : "create";
