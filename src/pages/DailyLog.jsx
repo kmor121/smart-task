@@ -239,9 +239,10 @@ export default function DailyLog() {
     setSaving(true);
     try {
       // 同名顧客をチェック
-      let clientId;
-      let clientName = newProjectForm.client_name.trim();
-      const existingClient = clients.find(c => c.name === clientName);
+        let clientId;
+        let clientName = newProjectForm.client_name.trim();
+        const clientsArr = Array.isArray(clients) ? clients : [];
+        const existingClient = clientsArr.find(c => c.name === clientName);
       
       if (existingClient) {
         clientId = existingClient.id;
