@@ -60,8 +60,7 @@ Deno.serve(async (req) => {
         console.log('Found client by name:', clientId, clientName);
       } else {
         const newClient = await base44.asServiceRole.entities.Client.create({
-          name: inputClientName.trim(),
-          is_active: true
+          name: inputClientName.trim()
         });
         clientId = strId(newClient.id);
         clientName = newClient.name;
