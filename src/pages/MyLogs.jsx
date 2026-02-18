@@ -131,10 +131,14 @@ export default function MyLogs() {
       </div>
 
       {/* デバッグ表示 */}
-      <div style={{background:'#fff3cd', padding:'8px', marginBottom:'8px', fontSize:'12px', borderRadius:'4px'}}>
-        currentUser: {effectiveEmail}<br/>
+      {allLogs.length > 0 && console.log("sample log:", JSON.stringify(allLogs[0]))}
+      <div style={{background:'#fff3cd', padding:'8px', marginBottom:'8px', fontSize:'12px', borderRadius:'4px', lineHeight:'1.8'}}>
+        currentUser(effectiveEmail): "{effectiveEmail}"<br/>
         全WorkLog件数: {allLogs.length}<br/>
-        表示件数: {workLogs.length}
+        表示件数: {workLogs.length}<br/>
+        1件目のuser_email: "{allLogs[0]?.user_email}"<br/>
+        一致?: {String(allLogs[0]?.user_email === effectiveEmail)}<br/>
+        全件のuser_email: {allLogs.map(l => l.user_email).join(', ')}
       </div>
 
       {/* Toolbar */}
