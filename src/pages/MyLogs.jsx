@@ -160,6 +160,17 @@ export default function MyLogs() {
           すべて閉じる
         </Button>
 
+        {isAdmin && (
+          <Button
+            variant={showAllUsers ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowAllUsers(v => !v)}
+            className={showAllUsers ? "bg-slate-700 text-white" : ""}
+          >
+            {showAllUsers ? "全員表示中" : "自分のみ"}
+          </Button>
+        )}
+
         <Button 
           onClick={() => navigate(createPageUrl("DailyLog"))}
           className="ml-auto bg-slate-900 hover:bg-slate-800 gap-2"
