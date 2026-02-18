@@ -68,25 +68,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    const name = `${project_date}　${project_title}`;
-
-    // Project エンティティのスキーマ: client_id は type:string (Relation ではない)
-    // is_active も boolean フィールドとして存在する
-    // 最小限のフィールドのみで作成
+    // Project 作成: name (deprecated) と is_active は渡さない
     const projectData = {
       project_date,
       project_title,
-      name,
+      client_id: clientId || undefined,
       client_name: clientName,
       status: status || '仮案件',
     };
 
+    // client_id が null の場合はキーごと除外
+    if (!clientId) delete projectData.client_id;
+
     console.log('Creating project:', JSON.stringify(projectData));
 
-    // Project の RLS は isAdmin 必須なので asServiceRole で作成
-    // name フィールドはスキーマ上「非推奨」 → 除外して再試行
-    const { name: _name, ...projectDataWithoutName } = projectData;
-    const project = await base44.asServiceRole.entities.Project.create(projectDataWithoutName);
+    const project = await base44.asServiceRole.entities.Project.create(projectData);
 
     console.log('Project created:', JSON.stringify({
       id: project.id,
