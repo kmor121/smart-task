@@ -1,5 +1,16 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+function strId(v) {
+  if (v == null) return null;
+  if (typeof v === 'object' && v !== null) {
+    const inner = v.id ?? v.value ?? null;
+    return strId(inner);
+  }
+  const s = String(v).trim();
+  if (!s || s === 'null' || s === '_none' || s === 'undefined') return null;
+  return s;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -15,27 +26,32 @@ Deno.serve(async (req) => {
       return Response.json({ error: '営業部のみ案件を作成できます' }, { status: 403 });
     }
 
-    const { project_date, project_title, client_id, client_name: inputClientName, status } = await req.json();
+    const { project_date, project_title, client_id: rawClientId, client_name: inputClientName, status } = await req.json();
 
     if (!project_date || !project_title) {
       return Response.json({ error: '日付と案件名は必須です' }, { status: 400 });
     }
 
-    if (!client_id && !inputClientName) {
+    const clientIdStr = strId(rawClientId);
+
+    if (!clientIdStr && !inputClientName) {
       return Response.json({ error: '顧客IDまたは顧客名が必要です' }, { status: 400 });
     }
 
     // 顧客情報を取得 or 作成（asServiceRole で RLS を回避）
-    let client;
-    if (client_id) {
-      client = await base44.asServiceRole.entities.Client.get(client_id);
+    let client = null;
+    if (clientIdStr) {
+      try {
+        client = await base44.asServiceRole.entities.Client.get(clientIdStr);
+      } catch (e) {
+        console.warn('Client.get failed, falling back to name search:', e.message);
+      }
     }
     if (!client && inputClientName) {
-      // 同名顧客を検索
       const allClients = await base44.asServiceRole.entities.Client.list();
-      client = allClients.find(c => c.name === inputClientName.trim());
+      const arr = Array.isArray(allClients) ? allClients : (allClients?.items ?? allClients?.data ?? []);
+      client = arr.find(c => c.name === inputClientName.trim()) || null;
       if (!client) {
-        // 新規顧客を作成
         client = await base44.asServiceRole.entities.Client.create({
           name: inputClientName.trim(),
           is_active: true
@@ -47,36 +63,50 @@ Deno.serve(async (req) => {
       return Response.json({ error: '顧客が見つかりません' }, { status: 404 });
     }
 
+    console.log('Project sample:', JSON.stringify({
+      id: client.id,
+      name: client.name,
+      client_id_type: typeof client.id
+    }));
+
     // 表示用nameを生成（YYYY-MM-DD　タイトル）
     const name = `${project_date}　${project_title}`;
 
+    // saveDailyLog と同様に、Relation フィールドは文字列IDをそのまま渡す
     const projectData = {
       project_date,
       project_title,
       name,
-      client_id: client.id,
-      client_name: client.name,
       status: status || '仮案件',
-      owner_user_id: user.id,
-      owner_user_name: user.full_name,
+      is_active: true,
       department_code: user.department_code || 'sales',
-      is_active: true
+      owner_user_id: strId(user.id),
+      owner_user_name: user.full_name || '',
     };
+
+    // client_id は文字列IDのみ（saveDailyLog の client_id と同じパターン）
+    const resolvedClientId = strId(client.id);
+    if (resolvedClientId) {
+      projectData.client_id = resolvedClientId;
+      projectData.client_name = client.name;
+    }
+
+    console.log('Creating project with data:', JSON.stringify(projectData));
 
     const project = await base44.asServiceRole.entities.Project.create(projectData);
 
-    console.log('✅ Project created successfully:', {
+    console.log('✅ Project created successfully:', JSON.stringify({
       id: project.id,
       name: project.name,
       client_id: project.client_id,
       client_name: project.client_name,
       status: project.status
-    });
+    }));
 
     return Response.json({ success: true, project });
   } catch (error) {
-    console.error('❌ Project creation failed:', error);
-    return Response.json({ 
+    console.error('❌ Project creation failed:', error.message, error.stack);
+    return Response.json({
       error: error.message || '案件の作成に失敗しました',
       details: error.toString()
     }, { status: 500 });
