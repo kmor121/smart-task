@@ -240,6 +240,7 @@ export default function MyLogs() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-slate-100">
+                        {isAdmin && showAllUsers && <th className="text-left py-2 text-xs font-medium text-slate-500">氏名</th>}
                         <th className="text-left py-2 text-xs font-medium text-slate-500">顧客</th>
                         <th className="text-left py-2 text-xs font-medium text-slate-500">案件名</th>
                         <th className="text-left py-2 text-xs font-medium text-slate-500">作業区分</th>
@@ -250,6 +251,7 @@ export default function MyLogs() {
                     <tbody>
                       {group.logs.map((log, idx) => (
                         <tr key={idx} className="border-b border-slate-50">
+                          {isAdmin && showAllUsers && <td className="py-2.5 text-slate-500 text-xs">{log.user_name || log.user_email}</td>}
                           <td className="py-2.5 text-slate-700">{log.client_name || "—"}</td>
                           <td className="py-2.5 text-slate-800">{log.project_name || "—"}</td>
                           <td className="py-2.5">
