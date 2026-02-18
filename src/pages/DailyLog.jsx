@@ -148,37 +148,45 @@ export default function DailyLog() {
   // existingLogs → rows に変換するヘルパー
   const logsToRows = (logs) => {
     const normalizeId = (id) => {
-      if (!id) return "";
+      if (id == null) return "";
       if (typeof id === "object") return id.id ? String(id.id) : "";
-      if (id === "null" || id === "_none" || id === "") return "";
-      return String(id);
+      const s = String(id).trim();
+      if (!s || s === "null" || s === "_none" || s === "undefined") return "";
+      return s;
     };
-    return logs.map(log => ({
-      id: log.id,
-      client_id: normalizeId(log.client_id),
-      client_name: log.client_name || "",
-      project_id: normalizeId(log.project_id),
-      project_name: log.project_name || "",
-      is_temporary_project: log.is_temporary_project || false,
-      work_category_id: log.work_category_id || "",
-      work_category_name: log.work_category_name || "",
-      is_revision: log.is_revision || false,
-      duration_minutes: log.duration_minutes || 0,
-      description: log.description || "",
-      status: log.status || "下書き",
-    }));
+    return logs.map(log => {
+      const row = {
+        id: log.id,
+        client_id: normalizeId(log.client_id),
+        client_name: log.client_name || "",
+        project_id: normalizeId(log.project_id),
+        project_name: log.project_name || "",
+        is_temporary_project: log.is_temporary_project || false,
+        work_category_id: normalizeId(log.work_category_id),
+        work_category_name: log.work_category_name || "",
+        is_revision: log.is_revision || false,
+        duration_minutes: log.duration_minutes || 0,
+        description: log.description || "",
+        status: log.status || "下書き",
+      };
+      console.log("[logsToRows] log.client_id:", log.client_id, "→", row.client_id, "| log.project_id:", log.project_id, "→", row.project_id);
+      return row;
+    });
   };
 
-  // 日付が変わるたびに初期化フラグをリセット
+  // 日付 or ユーザーが変わるたびに初期化フラグをリセット
   const rowsInitializedRef = React.useRef(false);
   const prevDateRef = React.useRef(dateStr);
-  if (prevDateRef.current !== dateStr) {
+  const prevUserRef = React.useRef(user?.email);
+  if (prevDateRef.current !== dateStr || prevUserRef.current !== user?.email) {
     prevDateRef.current = dateStr;
+    prevUserRef.current = user?.email;
     rowsInitializedRef.current = false;
   }
 
-  // existingLogs が変化したら rows を上書き（日付変更 or 保存後の再取得）
+  // existingLogs が変化したら rows を上書き（undefined→ローディング中はスキップ）
   useEffect(() => {
+    if (existingLogs === undefined) return; // まだロード中
     if (rowsInitializedRef.current) return;
     rowsInitializedRef.current = true;
     setRows(existingLogs.length > 0 ? logsToRows(existingLogs) : [emptyRow()]);
