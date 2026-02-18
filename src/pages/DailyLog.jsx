@@ -567,7 +567,8 @@ export default function DailyLog() {
                 canRemove={rows.length > 1}
                 canManageProjects={canManageProjects}
                 onEditProject={(projectId) => {
-                  const project = projects.find(p => p.id === projectId);
+                              const projectsArr = Array.isArray(projects) ? projects : [];
+                              const project = projectsArr.find(p => p.id === projectId);
                   if (project) {
                     setEditingProjectFromRow(project);
                     setEditProjectDialogOpen(true);
