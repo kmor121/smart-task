@@ -84,8 +84,10 @@ Deno.serve(async (req) => {
 
     console.log('Creating project:', JSON.stringify(projectData));
 
-    // client_id は渡さず、まず client_name だけで作成してみる
-    const project = await base44.asServiceRole.entities.Project.create(projectData);
+    // Project の RLS は isAdmin 必須なので asServiceRole で作成
+    // name フィールドはスキーマ上「非推奨」 → 除外して再試行
+    const { name: _name, ...projectDataWithoutName } = projectData;
+    const project = await base44.asServiceRole.entities.Project.create(projectDataWithoutName);
 
     console.log('Project created:', JSON.stringify({
       id: project.id,
