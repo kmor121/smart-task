@@ -645,13 +645,21 @@ export default function DailyLog() {
             </div>
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">
-                顧客名 <span className="text-red-500">*</span>
+                顧客 <span className="text-red-500">*</span>
               </label>
-              <Input
-                value={newProjectForm.client_name}
-                onChange={(e) => setNewProjectForm({ ...newProjectForm, client_name: e.target.value })}
-                placeholder="顧客名を入力"
-              />
+              <Select
+                value={newProjectForm.client_id}
+                onValueChange={(val) => setNewProjectForm({ ...newProjectForm, client_id: val })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="顧客を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.filter(c => c.is_active !== false).map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">
