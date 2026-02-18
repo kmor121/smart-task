@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       project_date,
       project_title,
       name,
-      client_id,
+      client_id: client.id,
       client_name: client.name,
       status: status || '仮案件',
       owner_user_id: user.id,
