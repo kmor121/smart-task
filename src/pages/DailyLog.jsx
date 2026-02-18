@@ -264,24 +264,24 @@ export default function DailyLog() {
       });
 
       if (response.data?.success && response.data?.project) {
-        const newProject = response.data.project;
-        
-        // マスタデータを再取得して完了を待つ
-        await queryClient.invalidateQueries({ queryKey: ['projects'] });
-        await queryClient.invalidateQueries({ queryKey: ['clients'] });
-        await queryClient.refetchQueries({ queryKey: ['projects'] });
-        
-        console.log('✅ Created project:', newProject);
-        
-        // 該当行に自動選択（文字列IDで統一）
-        handleRowChange(selectedRowForNewProject, {
-          ...rows[selectedRowForNewProject],
-          client_id: String(clientId),
-          client_name: clientName,
-          project_id: String(newProject.id),
-          project_name: newProject.name,
-          is_temporary_project: true
-        });
+          const newProject = response.data.project;
+
+          // 該当行に自動選択（先に更新してからマスタを再取得）
+          const targetRowIndex = selectedRowForNewProject;
+          handleRowChange(targetRowIndex, {
+            ...rows[targetRowIndex],
+            client_id: String(clientId),
+            client_name: clientName,
+            project_id: String(newProject.id),
+            project_name: newProject.name,
+            is_temporary_project: true
+          });
+
+          // マスタデータを再取得
+          await queryClient.invalidateQueries({ queryKey: ['projects'] });
+          await queryClient.invalidateQueries({ queryKey: ['clients'] });
+
+          console.log('✅ Created project:', newProject);
 
         toast.success(`案件「${newProject.name}」を作成しました`);
         setNewProjectDialogOpen(false);
