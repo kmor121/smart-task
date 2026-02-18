@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     const name = `${project_date}　${project_title}`;
     const resolvedClientId = strId(client.id);
 
-    // まず client_id を含まない最小データで試す
+    // 最小限のフィールドのみ（Relation フィールドなし）
     const projectData = {
       project_date,
       project_title,
@@ -76,14 +76,7 @@ Deno.serve(async (req) => {
       client_name: client.name,
       status: status || '仮案件',
       is_active: true,
-      department_code: user.department_code || 'sales',
-      owner_user_name: user.full_name || '',
     };
-
-    // client_id は Relation フィールドなので辞書形式 { id: "..." } で渡す
-    if (resolvedClientId) {
-      projectData.client_id = { id: resolvedClientId };
-    }
 
     console.log('Creating project with data:', JSON.stringify(projectData));
 
