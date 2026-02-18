@@ -84,11 +84,16 @@ Deno.serve(async (req) => {
       owner_user_name: user.full_name || '',
     };
 
-    // client_id は文字列IDのみ（saveDailyLog の client_id と同じパターン）
+    // client_id・owner_user_id は Relation フィールドのため辞書形式で渡す
     const resolvedClientId = strId(client.id);
     if (resolvedClientId) {
-      projectData.client_id = resolvedClientId;
+      projectData.client_id = { id: resolvedClientId };
       projectData.client_name = client.name;
+    }
+
+    const resolvedOwnerId = strId(user.id);
+    if (resolvedOwnerId) {
+      projectData.owner_user_id = { id: resolvedOwnerId };
     }
 
     console.log('Creating project with data:', JSON.stringify(projectData));
