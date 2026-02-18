@@ -488,7 +488,7 @@ export default function DailyLog() {
   const hours = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
 
-  const isSubmitted = existingLogs.some(l => l.status === "提出済" || l.status === "承認済");
+  const isSubmitted = (existingLogs ?? []).some(l => l.status === "提出済" || l.status === "承認済");
   
   // 提出/再提出判定
   const [hasLocalChanges, setHasLocalChanges] = useState(false);
