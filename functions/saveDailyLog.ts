@@ -85,8 +85,11 @@ Deno.serve(async (req: Request) => {
     const rowsIn: any[] = Array.isArray(body.rows) ? body.rows : [];
     const impersonate_user_email =
       typeof body.impersonate_user_email === "string" && body.impersonate_user_email
-        ? body.impersonate_user_email
-        : null;
+        ? body.impersonate_user_email : null;
+    const impersonate_user_name =
+      typeof body.impersonate_user_name === "string" ? body.impersonate_user_name : null;
+    const impersonate_department_code =
+      typeof body.impersonate_department_code === "string" ? body.impersonate_department_code : null;
 
     if (!work_date) {
       return json({ success: false, error: "work_date が必要です" });
@@ -98,34 +101,14 @@ Deno.serve(async (req: Request) => {
     // 3. serviceRole クライアント
     const writer = (base44 as any).asServiceRole || base44;
 
-    // 4. Impersonation（管理者のみ）
-    let effectiveUser: any = currentUser;
-    const isAdmin =
-      currentUser.role === "admin" ||
-      (currentUser as any).isOwner === true ||
-      (currentUser as any).isAdmin === true;
-
-    console.log("[saveDailyLog] currentUser:", currentUser?.email, "role:", currentUser?.role, "isAdmin:", isAdmin);
-    console.log("[saveDailyLog] impersonate_user_email:", impersonate_user_email);
-
-    if (impersonate_user_email && impersonate_user_email !== currentUser.email) {
-      try {
-        const allUsers = await writer.entities.User.list();
-        const usersArr = asArray(allUsers);
-        console.log("[saveDailyLog] User.list() count:", usersArr.length);
-        const targetUser = usersArr.find((u: any) => u.email === impersonate_user_email);
-        if (targetUser) {
-          effectiveUser = targetUser;
-          console.log("[saveDailyLog] Impersonating as:", effectiveUser.email);
-        } else {
-          console.log("[saveDailyLog] Target user not found for email:", impersonate_user_email);
+    // 4. Impersonation（User.list() を呼ばずリクエスト値をそのまま使用）
+    const effectiveUser: any = impersonate_user_email
+      ? {
+          email: impersonate_user_email,
+          full_name: impersonate_user_name || impersonate_user_email.split("@")[0],
+          department_code: impersonate_department_code || "",
         }
-      } catch (e: any) {
-        console.error("[saveDailyLog] User.list() failed:", e?.message);
-      }
-    }
-
-    console.log("[saveDailyLog] effectiveUser:", effectiveUser?.email);
+      : currentUser;
 
     const userEmail: string = effectiveUser.email;
     const userName: string =
