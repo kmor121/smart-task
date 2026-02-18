@@ -188,6 +188,8 @@ Deno.serve(async (req: Request) => {
 
       const op = rowId ? "update" : "create";
 
+      console.log(`[saveDailyLog] row[${i}] saving with user_email: ${userEmail}, op: ${op}`);
+
       try {
         if (op === "update") {
             await writer.entities.WorkLog.update(rowId, logData);
