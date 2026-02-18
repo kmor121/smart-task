@@ -80,14 +80,20 @@ Deno.serve(async (req) => {
       owner_user_name: user.full_name || '',
     };
 
-    // client_id を文字列で追加
+    // client_id は Relation フィールドなので辞書形式 { id: "..." } で渡す
     if (resolvedClientId) {
-      projectData.client_id = resolvedClientId;
+      projectData.client_id = { id: resolvedClientId };
     }
 
     console.log('Creating project with data:', JSON.stringify(projectData));
 
     const project = await base44.asServiceRole.entities.Project.create(projectData);
+    // 返却値の client_id を文字列に正規化
+    if (project && typeof project.client_id === 'object' && project.client_id !== null) {
+      project.client_id = project.client_id.id ?? resolvedClientId;
+    } else if (!project.client_id) {
+      project.client_id = resolvedClientId;
+    }
 
     console.log('Project created:', JSON.stringify({
       id: project.id,
