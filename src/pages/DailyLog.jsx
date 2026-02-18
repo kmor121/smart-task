@@ -426,11 +426,12 @@ export default function DailyLog() {
       setLastSaveResult(result);
 
       if (result.success) {
-        // 保存後に最新データを再取得して行を更新
+        // 保存後に最新データを再取得して rows を直接更新（画面をリセットしない）
         const refreshed = await base44.entities.WorkLog.list('-created_date', 5000);
         const myLogs = refreshed.filter((l) => l.work_date === dateStr && l.user_email === (impersonateUserEmail || user.email));
         if (myLogs.length > 0) {
-          rowsInitializedRef.current = false; // 再初期化を許可
+          setRows(logsToRows(myLogs));
+          rowsInitializedRef.current = true; // useEffectによる上書きを防ぐ
           queryClient.setQueryData(["workLogs", dateStr, user?.email], myLogs);
         }
 
