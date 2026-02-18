@@ -82,12 +82,9 @@ Deno.serve(async (req) => {
       status: status || '仮案件',
     };
 
-    if (clientId) {
-      projectData.client_id = clientId;
-    }
-
     console.log('Creating project:', JSON.stringify(projectData));
 
+    // client_id は渡さず、まず client_name だけで作成してみる
     const project = await base44.asServiceRole.entities.Project.create(projectData);
 
     console.log('Project created:', JSON.stringify({
