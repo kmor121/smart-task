@@ -13,26 +13,35 @@ import { createPageUrl } from "../utils";
 import useCurrentUser from "../components/hooks/useCurrentUser";
 
 export default function MyLogs() {
-  const { user } = useCurrentUser();
+  const { user, isAdmin } = useCurrentUser();
   const navigate = useNavigate();
 
   const [filterStatus, setFilterStatus] = useState("all");
   const [expandedItems, setExpandedItems] = useState([]);
+  const [showAllUsers, setShowAllUsers] = useState(false);
 
-  // 直近30日分の自分のWorkLogを取得
-  const { data: workLogs = [], isLoading } = useQuery({
-    queryKey: ["myWorkLogs", user?.email],
+  // 有効なメール（impersonate中はそちらを優先）
+  const effectiveEmail = user?.email || "";
+
+  // WorkLogを取得
+  const { data: allLogs = [], isLoading } = useQuery({
+    queryKey: ["myWorkLogs", effectiveEmail, showAllUsers],
     queryFn: async () => {
-      // list()で全件取得→JSで絞り込み（filter()のエラー回避）
-      const allLogs = await base44.entities.WorkLog.list("-created_date", 5000);
-      const thirtyDaysAgo = format(subDays(new Date(), 30), "yyyy-MM-dd");
-      return allLogs.filter(log => 
-        log.user_email === user.email && 
-        log.work_date >= thirtyDaysAgo
-      );
+      return await base44.entities.WorkLog.list("-created_date", 5000);
     },
-    enabled: !!user?.email,
+    enabled: !!effectiveEmail,
   });
+
+  const thirtyDaysAgo = format(subDays(new Date(), 30), "yyyy-MM-dd");
+
+  // 表示対象のログ（管理者かつ全件表示の場合は全ユーザー、それ以外は自分のみ）
+  const workLogs = useMemo(() => {
+    return allLogs.filter(log => {
+      const dateOk = log.work_date >= thirtyDaysAgo;
+      const userOk = (isAdmin && showAllUsers) ? true : log.user_email === effectiveEmail;
+      return dateOk && userOk;
+    });
+  }, [allLogs, effectiveEmail, isAdmin, showAllUsers, thirtyDaysAgo]);
 
   // 日付ごとにグループ化
   const groupedByDate = useMemo(() => {
