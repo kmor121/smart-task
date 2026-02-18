@@ -237,41 +237,31 @@ export default function DailyLog() {
     if (selectedRowForNewProject === null) return;
 
     setSaving(true);
-    try {
-      // 同名顧客をチェック
-        let clientId;
-        let clientName = newProjectForm.client_name.trim();
+      try {
+        const clientName = newProjectForm.client_name.trim();
         const clientsArr = Array.isArray(clients) ? clients : [];
         const existingClient = clientsArr.find(c => c.name === clientName);
-      
-      if (existingClient) {
-        clientId = existingClient.id;
-      } else {
-        // 顧客を新規作成
-        const newClient = await base44.entities.Client.create({
-          name: clientName,
-          is_active: true
+
+        // 案件を作成（顧客IDが不明な場合はバックエンドが顧客も作成する）
+        const response = await base44.functions.invoke('createProject', {
+          project_date: newProjectForm.project_date,
+          project_title: newProjectForm.project_title.trim(),
+          client_id: existingClient?.id || null,
+          client_name: clientName,
+          status: "仮案件"
         });
-        clientId = newClient.id;
-      }
 
-      // 案件を作成
-      const response = await base44.functions.invoke('createProject', {
-        project_date: newProjectForm.project_date,
-        project_title: newProjectForm.project_title.trim(),
-        client_id: clientId,
-        status: "仮案件"
-      });
+        console.log("createProject response:", JSON.stringify(response.data));
 
-      if (response.data?.success && response.data?.project) {
+        if (response.data?.success && response.data?.project) {
           const newProject = response.data.project;
-
-          // 該当行に自動選択（先に更新してからマスタを再取得）
           const targetRowIndex = selectedRowForNewProject;
+
+          // 該当行に即時反映
           handleRowChange(targetRowIndex, {
             ...rows[targetRowIndex],
-            client_id: String(clientId),
-            client_name: clientName,
+            client_id: String(newProject.client_id),
+            client_name: newProject.client_name,
             project_id: String(newProject.id),
             project_name: newProject.name,
             is_temporary_project: true
@@ -281,24 +271,22 @@ export default function DailyLog() {
           await queryClient.invalidateQueries({ queryKey: ['projects'] });
           await queryClient.invalidateQueries({ queryKey: ['clients'] });
 
-          console.log('✅ Created project:', newProject);
-
-        toast.success(`案件「${newProject.name}」を作成しました`);
-        setNewProjectDialogOpen(false);
-        setNewProjectForm({ client_name: "", project_date: "", project_title: "" });
-        setSelectedRowForNewProject(null);
-      } else {
-        const errorMsg = response.data?.error || "案件の作成に失敗しました";
-        console.error('❌ Project creation failed:', response.data);
-        throw new Error(errorMsg);
+          toast.success(`案件「${newProject.name}」を作成しました`);
+          setNewProjectDialogOpen(false);
+          setNewProjectForm({ client_name: "", project_date: "", project_title: "" });
+          setSelectedRowForNewProject(null);
+        } else {
+          const errorMsg = response.data?.error || "案件の作成に失敗しました";
+          console.error('❌ Project creation failed:', response.data);
+          throw new Error(errorMsg);
+        }
+      } catch (error) {
+        console.error("❌ Failed to create project:", error);
+        const errorMsg = error.response?.data?.error || error.response?.data?.details || error.message || "作成できませんでした";
+        toast.error(`案件作成エラー: ${errorMsg}`);
+      } finally {
+        setSaving(false);
       }
-    } catch (error) {
-      console.error("❌ Failed to create project:", error);
-      const errorMsg = error.response?.data?.error || error.response?.data?.details || error.message || "作成できませんでした";
-      toast.error(`案件作成エラー: ${errorMsg}`);
-    } finally {
-      setSaving(false);
-    }
   };
 
   const refreshProjects = async () => {
