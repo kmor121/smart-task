@@ -45,7 +45,7 @@ export default function DashboardFilters({ filters, onChange, clients, departmen
           <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="_all">すべて</SelectItem>
-            {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            {(Array.isArray(clients) ? clients : []).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
