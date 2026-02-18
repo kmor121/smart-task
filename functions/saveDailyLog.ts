@@ -105,15 +105,27 @@ Deno.serve(async (req: Request) => {
       (currentUser as any).isOwner === true ||
       (currentUser as any).isAdmin === true;
 
-    if (impersonate_user_email && isAdmin) {
+    console.log("[saveDailyLog] currentUser:", currentUser?.email, "role:", currentUser?.role, "isAdmin:", isAdmin);
+    console.log("[saveDailyLog] impersonate_user_email:", impersonate_user_email);
+
+    if (impersonate_user_email && impersonate_user_email !== currentUser.email) {
       try {
         const allUsers = await writer.entities.User.list();
-        const users = asArray(allUsers).filter((u: any) => u.email === impersonate_user_email);
-        if (users.length > 0) effectiveUser = users[0];
-      } catch {
-        // impersonation 失敗時は currentUser で続行
+        const usersArr = asArray(allUsers);
+        console.log("[saveDailyLog] User.list() count:", usersArr.length);
+        const targetUser = usersArr.find((u: any) => u.email === impersonate_user_email);
+        if (targetUser) {
+          effectiveUser = targetUser;
+          console.log("[saveDailyLog] Impersonating as:", effectiveUser.email);
+        } else {
+          console.log("[saveDailyLog] Target user not found for email:", impersonate_user_email);
+        }
+      } catch (e: any) {
+        console.error("[saveDailyLog] User.list() failed:", e?.message);
       }
     }
+
+    console.log("[saveDailyLog] effectiveUser:", effectiveUser?.email);
 
     const userEmail: string = effectiveUser.email;
     const userName: string =
