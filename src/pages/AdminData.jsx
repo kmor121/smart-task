@@ -30,20 +30,18 @@ export default function AdminData() {
   
   const [resetForm, setResetForm] = useState({ startDate: "", endDate: "", confirmText: "" });
 
+  const toArray = (res) => Array.isArray(res) ? res : (res?.items ?? res?.data ?? []);
+
   const { data: clients = [], isLoading: loadingClients } = useQuery({
     queryKey: ["clients"],
-    queryFn: async () => {
-      const res = await base44.entities.Client.list();
-      return Array.isArray(res) ? res : (res?.items ?? res?.data ?? []);
-    },
+    queryFn: () => base44.entities.Client.list(),
+    select: toArray,
   });
 
   const { data: projects = [], isLoading: loadingProjects } = useQuery({
     queryKey: ["projects"],
-    queryFn: async () => {
-      const res = await base44.entities.Project.list();
-      return Array.isArray(res) ? res : (res?.items ?? res?.data ?? []);
-    },
+    queryFn: () => base44.entities.Project.list(),
+    select: toArray,
   });
 
   const saveClientMutation = useMutation({
