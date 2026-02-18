@@ -388,8 +388,8 @@ export default function DailyLog() {
     }
 
     try {
-      // impersonate_user_email を取得（sessionStorage優先、なければuser.email）
-      const impersonateUserEmail = sessionStorage.getItem("impersonate_user_email") || user.email;
+      // impersonate中の場合のみ impersonate先のemailを送る（通常時はnull→サーバー側でcurrentUserを使用）
+      const impersonateUserEmail = sessionStorage.getItem("impersonate_user_email") || null;
 
       // 提出時は submitted_at を付与し、ID を正規化
       const rowsToSave = rows
