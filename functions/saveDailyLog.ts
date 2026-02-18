@@ -29,11 +29,9 @@ function toInt(v: any): number {
   return Number.isFinite(n) ? Math.trunc(n) : NaN;
 }
 
-// 有効な文字列IDだけ返す。空・null・"null"等はnullを返す
 function strId(v: any): string | null {
   if (v == null) return null;
   if (typeof v === "object" && v !== null) {
-    // { id: "xxx" } 形式への対応
     const inner = v.id ?? v.value ?? null;
     return strId(inner);
   }
@@ -45,6 +43,24 @@ function strId(v: any): string | null {
 function strVal(v: any): string {
   if (v == null) return "";
   return String(v).trim();
+}
+
+function fullErrInfo(e: any) {
+  let responseBody = null;
+  try {
+    responseBody = JSON.parse(e?.response?.data ?? e?.responseText ?? null);
+  } catch {
+    responseBody = e?.response?.data ?? e?.responseText ?? null;
+  }
+  return {
+    message: e?.message ?? String(e),
+    name: e?.name ?? null,
+    response_status: e?.response?.status ?? e?.status ?? null,
+    response_data: responseBody,
+    response_headers: e?.response?.headers ?? null,
+    stack: e?.stack ?? null,
+    json: (() => { try { return JSON.parse(JSON.stringify(e)); } catch { return null; } })(),
+  };
 }
 
 Deno.serve(async (req: Request) => {
@@ -86,13 +102,13 @@ Deno.serve(async (req: Request) => {
     let effectiveUser: any = currentUser;
     const isAdmin =
       currentUser.role === "admin" ||
-      currentUser.isOwner === true ||
-      currentUser.isAdmin === true;
+      (currentUser as any).isOwner === true ||
+      (currentUser as any).isAdmin === true;
 
     if (impersonate_user_email && isAdmin) {
       try {
-        const res = await writer.entities.User.filter({ email: impersonate_user_email });
-        const users = asArray(res);
+        const allUsers = await writer.entities.User.list();
+        const users = asArray(allUsers).filter((u: any) => u.email === impersonate_user_email);
         if (users.length > 0) effectiveUser = users[0];
       } catch {
         // impersonation 失敗時は currentUser で続行
@@ -128,12 +144,11 @@ Deno.serve(async (req: Request) => {
       const isSubmit = strVal(row.status).includes("提出");
       const status = isSubmit ? "提出済" : "下書き";
 
-      // ベースデータ（必須フィールド）
+      // ベースデータ（null値を含めない）
       const logData: Record<string, any> = {
         work_date,
         user_email: userEmail,
         user_name: userName,
-        department_code: departmentCode,
         work_category_id: workCategoryId,
         work_category_name: strVal(row.work_category_name),
         is_revision: row.is_revision === true,
@@ -143,12 +158,10 @@ Deno.serve(async (req: Request) => {
         status,
       };
 
-      // submitted_at は提出時のみ含める（null を送らない）
-      if (isSubmit) {
-        logData.submitted_at = new Date().toISOString();
-      }
+      // 空文字でなければ含める
+      if (departmentCode) logData.department_code = departmentCode;
+      if (isSubmit) logData.submitted_at = new Date().toISOString();
 
-      // Relation フィールドは有効な文字列IDがある場合のみ含める（null/空を送らない）
       const clientId = strId(row.client_id);
       if (clientId) {
         logData.client_id = clientId;
@@ -162,21 +175,28 @@ Deno.serve(async (req: Request) => {
       }
 
       const op = rowId ? "update" : "create";
+
+      console.log(`[saveDailyLog] row[${i}] op=${op}`, JSON.stringify(logData));
+
       try {
         if (op === "update") {
           await writer.entities.WorkLog.update(rowId, logData);
           savedIds.push(rowId as string);
         } else {
           const saved = await writer.entities.WorkLog.create(logData);
+          console.log(`[saveDailyLog] row[${i}] create result:`, JSON.stringify(saved));
           if (saved?.id) savedIds.push(String(saved.id));
         }
       } catch (e: any) {
+        const info = fullErrInfo(e);
+        console.error(`[saveDailyLog] row[${i}] ERROR:`, JSON.stringify(info));
         errors.push({
           row_index: i,
           op,
-          message: e?.message ?? String(e),
-          response_status: e?.response?.status ?? null,
-          response_data: e?.response?.data ?? null,
+          message: info.message,
+          response_status: info.response_status,
+          response_data: info.response_data,
+          logData_sent: logData,
         });
       }
     }
@@ -193,10 +213,7 @@ Deno.serve(async (req: Request) => {
         : "保存できた行がありませんでした",
     });
   } catch (e: any) {
-    return json({
-      success: false,
-      error: e?.message ?? String(e),
-      stack: e?.stack ?? null,
-    }, 500);
+    const info = fullErrInfo(e);
+    return json({ success: false, error: info.message, ...info }, 500);
   }
 });
