@@ -83,12 +83,13 @@ export default function Dashboard() {
 
   // 案件ごとの集計（最新の案件名を projects から取得してリネーム反映）
   const projectStats = useMemo(() => {
+    const projectsArr = Array.isArray(projects) ? projects : [];
     const map = {};
     filteredLogs.forEach(log => {
       const pid = log.project_id;
       if (!map[pid]) {
         // projects から最新の案件名を取得（リネームされても反映される）
-        const projectData = projects.find(p => p.id === pid);
+        const projectData = projectsArr.find(p => p.id === pid);
         
         map[pid] = {
           project_id: pid,
