@@ -614,52 +614,25 @@ export default function DailyLog() {
 
       {/* 新規案件作成モーダル */}
       <Dialog open={newProjectDialogOpen} onOpenChange={setNewProjectDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>新規案件作成</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-slate-700 mb-1 block">
-                日付 <span className="text-red-500">*</span>
-              </label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {newProjectForm.project_date ? format(new Date(newProjectForm.project_date), "yyyy年M月d日(E)", { locale: ja }) : "日付を選択"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={newProjectForm.project_date ? new Date(newProjectForm.project_date) : undefined}
-                    onSelect={(date) => setNewProjectForm({ ...newProjectForm, project_date: date ? format(date, "yyyy-MM-dd") : "" })}
-                    locale={ja}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+          <div className="space-y-4 pt-2">
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">
                 顧客 <span className="text-red-500">*</span>
               </label>
-              <Select
+              <select
                 value={newProjectForm.client_id}
-                onValueChange={(val) => setNewProjectForm({ ...newProjectForm, client_id: val })}
+                onChange={(e) => setNewProjectForm({ ...newProjectForm, client_id: e.target.value })}
+                className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="顧客を選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.filter(c => c.is_active !== false).map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="">顧客を選択</option>
+                {clients.filter(c => c.is_active !== false).map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">
