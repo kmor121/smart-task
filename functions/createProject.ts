@@ -68,12 +68,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Project 作成: client_id・name・is_active は渡さない（Base44が型エラーを起こすため）
+    // Project 作成: client_id・name・is_active・status は渡さない（Base44が型エラーを起こすため）
     const projectData = {
       project_date,
       project_title,
       client_name: clientName,
-      status: status || '仮案件',
     };
 
     console.log('Creating project:', JSON.stringify(projectData));
