@@ -424,7 +424,14 @@ export default function DailyLog() {
       setLastSaveResult(result);
 
       if (result.success) {
-        queryClient.invalidateQueries({ queryKey: ["workLogs"] });
+        // 保存後に最新データを再取得して行を更新
+        const refreshed = await base44.entities.WorkLog.list('-created_date', 5000);
+        const myLogs = refreshed.filter((l) => l.work_date === dateStr && l.user_email === (impersonateUserEmail || user.email));
+        if (myLogs.length > 0) {
+          rowsInitializedRef.current = false; // 再初期化を許可
+          queryClient.setQueryData(["workLogs", dateStr, user?.email], myLogs);
+        }
+
         queryClient.invalidateQueries({ queryKey: ["myLogsCount"] });
         queryClient.invalidateQueries({ queryKey: ["teamDailyLogs"] });
 
