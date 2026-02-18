@@ -683,7 +683,7 @@ export default function DailyLog() {
                 variant="outline"
                 onClick={() => {
                   setNewProjectDialogOpen(false);
-                  setNewProjectForm({ client_name: "", project_date: "", project_title: "" });
+                  setNewProjectForm({ client_id: "", project_date: "", project_title: "" });
                   setSelectedRowForNewProject(null);
                 }}
                 disabled={saving}
