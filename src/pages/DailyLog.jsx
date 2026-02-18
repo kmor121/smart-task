@@ -142,48 +142,43 @@ export default function DailyLog() {
     cleanupData();
   }, [user?.email]);
 
-  // 既存ログが変わったらrowsを更新（正規化処理を追加）
-  // ⚠️ 初回のみ実行するようにガード
+  // existingLogs → rows に変換するヘルパー
+  const logsToRows = (logs) => {
+    const normalizeId = (id) => {
+      if (!id) return "";
+      if (typeof id === "object") return id.id ? String(id.id) : "";
+      if (id === "null" || id === "_none" || id === "") return "";
+      return String(id);
+    };
+    return logs.map(log => ({
+      id: log.id,
+      client_id: normalizeId(log.client_id),
+      client_name: log.client_name || "",
+      project_id: normalizeId(log.project_id),
+      project_name: log.project_name || "",
+      is_temporary_project: log.is_temporary_project || false,
+      work_category_id: log.work_category_id || "",
+      work_category_name: log.work_category_name || "",
+      is_revision: log.is_revision || false,
+      duration_minutes: log.duration_minutes || 0,
+      description: log.description || "",
+      status: log.status || "下書き",
+    }));
+  };
+
+  // 日付が変わるたびに初期化フラグをリセット
   const rowsInitializedRef = React.useRef(false);
-  
+  const prevDateRef = React.useRef(dateStr);
+  if (prevDateRef.current !== dateStr) {
+    prevDateRef.current = dateStr;
+    rowsInitializedRef.current = false;
+  }
+
+  // existingLogs が変化したら rows を上書き（日付変更 or 保存後の再取得）
   useEffect(() => {
-    if (rowsInitializedRef.current) {
-      console.log(`[DailyLog] Skipping rows update (already initialized)`);
-      return;
-    }
-    
-    console.log(`[DailyLog] Initializing rows from existingLogs:`, existingLogs.length);
-    
-    if (existingLogs.length > 0) {
-      rowsInitializedRef.current = true;
-      setRows(existingLogs.map(log => {
-        // project_id と client_id を正規化（""に統一）
-        const normalizeId = (id) => {
-          if (!id) return "";
-          if (typeof id === "object") return id.id ? String(id.id) : "";
-          if (id === "null" || id === "_none" || id === "") return "";
-          return String(id);
-        };
-        
-        return {
-          id: log.id,
-          client_id: normalizeId(log.client_id),
-          client_name: log.client_name || "",
-          project_id: normalizeId(log.project_id),
-          project_name: log.project_name || "",
-          is_temporary_project: log.is_temporary_project || false,
-          work_category_id: log.work_category_id || "",
-          work_category_name: log.work_category_name || "",
-          is_revision: log.is_revision || false,
-          duration_minutes: log.duration_minutes || 0,
-          description: log.description || "",
-          status: log.status || "下書き",
-        };
-      }));
-    } else if (!rowsInitializedRef.current) {
-      rowsInitializedRef.current = true;
-      setRows([emptyRow()]);
-    }
+    if (rowsInitializedRef.current) return;
+    rowsInitializedRef.current = true;
+    setRows(existingLogs.length > 0 ? logsToRows(existingLogs) : [emptyRow()]);
   }, [existingLogs]);
 
   const handleRowChange = (index, updated) => {
