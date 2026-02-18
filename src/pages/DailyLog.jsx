@@ -218,10 +218,9 @@ export default function DailyLog() {
     setSelectedRowForNewProject(rowIndex);
     // 該当行に顧客が既に選択されていればプリセット
     const currentRow = rows[rowIndex];
-    const presetClient = currentRow?.client_id ? 
-      clients.find(c => c.id === currentRow.client_id)?.name || "" : "";
+    const presetClientId = currentRow?.client_id || "";
     
-    setNewProjectForm({ client_name: presetClient, project_date: dateStr, project_title: "" });
+    setNewProjectForm({ client_id: presetClientId, project_date: dateStr, project_title: "" });
     setNewProjectDialogOpen(true);
   };
 
