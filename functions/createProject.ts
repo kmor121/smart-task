@@ -15,14 +15,34 @@ Deno.serve(async (req) => {
       return Response.json({ error: '営業部のみ案件を作成できます' }, { status: 403 });
     }
 
-    const { project_date, project_title, client_id, status } = await req.json();
+    const { project_date, project_title, client_id, client_name: inputClientName, status } = await req.json();
 
-    if (!project_date || !project_title || !client_id) {
-      return Response.json({ error: '日付、案件名、顧客IDは必須です' }, { status: 400 });
+    if (!project_date || !project_title) {
+      return Response.json({ error: '日付と案件名は必須です' }, { status: 400 });
     }
 
-    // 顧客情報を取得
-    const client = await base44.asServiceRole.entities.Client.get(client_id);
+    if (!client_id && !inputClientName) {
+      return Response.json({ error: '顧客IDまたは顧客名が必要です' }, { status: 400 });
+    }
+
+    // 顧客情報を取得 or 作成（asServiceRole で RLS を回避）
+    let client;
+    if (client_id) {
+      client = await base44.asServiceRole.entities.Client.get(client_id);
+    }
+    if (!client && inputClientName) {
+      // 同名顧客を検索
+      const allClients = await base44.asServiceRole.entities.Client.list();
+      client = allClients.find(c => c.name === inputClientName.trim());
+      if (!client) {
+        // 新規顧客を作成
+        client = await base44.asServiceRole.entities.Client.create({
+          name: inputClientName.trim(),
+          is_active: true
+        });
+        console.log('✅ New client created:', client.id, client.name);
+      }
+    }
     if (!client) {
       return Response.json({ error: '顧客が見つかりません' }, { status: 404 });
     }
