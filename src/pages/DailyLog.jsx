@@ -243,43 +243,47 @@ export default function DailyLog() {
         const existingClient = clientsArr.find(c => c.name === clientName);
 
         // 案件を作成（顧客IDが不明な場合はバックエンドが顧客も作成する）
-        const response = await base44.functions.invoke('createProject', {
-          project_date: newProjectForm.project_date,
-          project_title: newProjectForm.project_title.trim(),
-          client_id: existingClient?.id || null,
-          client_name: clientName,
-          status: "仮案件"
-        });
+        // 顧客が存在しない場合は先に作成
+              let finalClientId = existingClient?.id || null;
+              if (!finalClientId && clientName) {
+                const newClient = await base44.entities.Client.create({ name: clientName });
+                finalClientId = newClient.id;
+              }
 
-        console.log("createProject response:", JSON.stringify(response.data));
+              const projectTitle = newProjectForm.project_title.trim();
+              const projectData = {
+                project_date: newProjectForm.project_date,
+                project_title: projectTitle,
+                client_id: finalClientId || undefined,
+                client_name: clientName,
+                status: "仮案件",
+              };
+              console.log("Creating project (direct):", JSON.stringify(projectData));
 
-        if (response.data?.success && response.data?.project) {
-          const newProject = response.data.project;
-          const targetRowIndex = selectedRowForNewProject;
+              const newProject = await base44.entities.Project.create(projectData);
+              console.log("Project created:", JSON.stringify(newProject));
 
-          // 該当行に即時反映
-          handleRowChange(targetRowIndex, {
-            ...rows[targetRowIndex],
-            client_id: String(newProject.client_id),
-            client_name: newProject.client_name,
-            project_id: String(newProject.id),
-            project_name: newProject.name,
-            is_temporary_project: true
-          });
+              const targetRowIndex = selectedRowForNewProject;
+              const displayName = newProject.project_title || newProject.name || projectTitle;
 
-          // マスタデータを再取得
-          await queryClient.invalidateQueries({ queryKey: ['projects'] });
-          await queryClient.invalidateQueries({ queryKey: ['clients'] });
+              // 該当行に即時反映
+              handleRowChange(targetRowIndex, {
+                ...rows[targetRowIndex],
+                client_id: String(newProject.client_id || finalClientId || ""),
+                client_name: newProject.client_name || clientName,
+                project_id: String(newProject.id),
+                project_name: displayName,
+                is_temporary_project: true
+              });
 
-          toast.success(`案件「${newProject.name}」を作成しました`);
-          setNewProjectDialogOpen(false);
-          setNewProjectForm({ client_name: "", project_date: "", project_title: "" });
-          setSelectedRowForNewProject(null);
-        } else {
-          const errorMsg = response.data?.error || "案件の作成に失敗しました";
-          console.error('❌ Project creation failed:', response.data);
-          throw new Error(errorMsg);
-        }
+              // マスタデータを再取得
+              await queryClient.invalidateQueries({ queryKey: ['projects'] });
+              await queryClient.invalidateQueries({ queryKey: ['clients'] });
+
+              toast.success(`案件「${displayName}」を作成しました`);
+              setNewProjectDialogOpen(false);
+              setNewProjectForm({ client_name: "", project_date: "", project_title: "" });
+              setSelectedRowForNewProject(null);
       } catch (error) {
         console.error("❌ Failed to create project:", error);
         const errorMsg = error.response?.data?.error || error.response?.data?.details || error.message || "作成できませんでした";
