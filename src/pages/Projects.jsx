@@ -27,14 +27,13 @@ export default function ProjectsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
 
-  const { data: projectsData, isLoading } = useQuery({
-    queryKey: ['projects'],
+  const { data: projectsData, isLoading: projectsLoading } = useQuery({
+    queryKey: ['projects', user?.email],
     queryFn: async () => {
       const response = await base44.functions.invoke("getProjects", {});
       return response.data;
     },
     enabled: !!user && canView,
-    initialData: { success: true, projects: [], count: 0 },
   });
 
   const projects = projectsData?.projects || [];
