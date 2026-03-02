@@ -54,13 +54,16 @@ export default function WorkLogRow({
         // 選択時（必ず文字列で保存）
         const project = projects.find(p => String(p.id) === projectId);
         if (project) {
+          const displayName = project.project_date && project.project_title
+            ? `${project.project_date} ${project.project_title}`
+            : (project.project_title || project.name || "");
           updated.project_id = projectId;
-          updated.project_name = project.name;
+          updated.project_name = displayName;
           updated.client_name = project.client_name || updated.client_name;
           updated.client_id = project.client_id ? String(project.client_id) : updated.client_id;
           updated.is_temporary_project = project.status === "仮案件";
           setLastProjectSelected(projectId);
-          console.log(`[WorkLogRow ${index}] ✅ Project selected:`, projectId, project.name);
+          console.log(`[WorkLogRow ${index}] ✅ Project selected:`, projectId, displayName);
         } else {
           // 存在しない場合はクリア
           updated.project_id = "";
