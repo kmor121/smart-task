@@ -285,6 +285,42 @@ export default function DailyLog() {
     }
   };
 
+  const handleCreateNewClient = (rowIndex) => {
+    setNewClientTargetRowIndex(rowIndex);
+    setNewClientName("");
+    setNewClientDialogOpen(true);
+  };
+
+  const saveNewClient = async () => {
+    if (!newClientName.trim()) {
+      toast.error("顧客名を入力してください");
+      return;
+    }
+    setNewClientSaving(true);
+    try {
+      const newClient = await base44.entities.Client.create({ name: newClientName.trim() });
+      await queryClient.invalidateQueries({ queryKey: ['clients'] });
+      // 作成した顧客を該当行に自動選択
+      if (newClientTargetRowIndex !== null) {
+        handleRowChange(newClientTargetRowIndex, {
+          ...rows[newClientTargetRowIndex],
+          client_id: String(newClient.id),
+          client_name: newClient.name,
+          project_id: "",
+          project_name: "",
+        });
+      }
+      toast.success(`顧客「${newClient.name}」を作成しました`);
+      setNewClientDialogOpen(false);
+      setNewClientName("");
+      setNewClientTargetRowIndex(null);
+    } catch (error) {
+      toast.error(`顧客作成エラー: ${error.message}`);
+    } finally {
+      setNewClientSaving(false);
+    }
+  };
+
   const refreshProjects = async () => {
     await queryClient.invalidateQueries({ queryKey: ['projects'] });
     await queryClient.refetchQueries({ queryKey: ['projects'] });
