@@ -183,7 +183,7 @@ export default function ProjectsPage() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Building2 className="w-12 h-12 text-slate-300 mb-3" />
               <p className="text-slate-500">案件がありません</p>
-              {isSales && (
+              {canView && (
                 <p className="text-sm text-slate-400 mt-1">「＋新規案件」から作成してください</p>
               )}
             </CardContent>
