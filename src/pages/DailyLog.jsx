@@ -226,7 +226,6 @@ export default function DailyLog() {
     const presetClientId = currentRow?.client_id || "";
     setSelectedNewProjectClientId(presetClientId);
     setNewProjectTitle("");
-    setNewProjectForm({ client_id: presetClientId, project_date: dateStr, project_title: "" });
     setNewProjectDialogOpen(true);
   };
 
