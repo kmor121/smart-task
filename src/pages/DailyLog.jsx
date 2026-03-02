@@ -250,11 +250,8 @@ export default function DailyLog() {
       const projectName = `${dateStr} ${projectTitle}`;
 
       const newProject = await base44.entities.Project.create({
-        project_date: dateStr,
-        project_title: projectTitle,
+        name: `${dateStr} ${projectTitle}`,
         client_id: selectedNewProjectClientId,
-        client_name: clientName,
-        status: "仮案件",
       });
 
       const displayName = newProject.project_title || projectTitle;
