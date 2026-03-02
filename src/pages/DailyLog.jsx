@@ -617,13 +617,14 @@ export default function DailyLog() {
             <DialogTitle>新規案件作成</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
+            {/* 顧客セレクト */}
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">
                 顧客 <span className="text-red-500">*</span>
               </label>
               <select
-                value={newProjectForm.client_id}
-                onChange={(e) => setNewProjectForm({ ...newProjectForm, client_id: e.target.value })}
+                value={selectedNewProjectClientId}
+                onChange={(e) => setSelectedNewProjectClientId(e.target.value)}
                 className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
               >
                 <option value="">顧客を選択</option>
@@ -632,29 +633,33 @@ export default function DailyLog() {
                 ))}
               </select>
             </div>
+            {/* 案件名テキスト入力 */}
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">
                 案件名 <span className="text-red-500">*</span>
               </label>
               <Input
-                value={newProjectForm.project_title}
-                onChange={(e) => setNewProjectForm({ ...newProjectForm, project_title: e.target.value })}
+                value={newProjectTitle}
+                onChange={(e) => setNewProjectTitle(e.target.value)}
                 placeholder="案件名を入力"
               />
             </div>
-            {newProjectForm.project_date && newProjectForm.project_title && (
+            {/* 表示名プレビュー */}
+            {newProjectTitle.trim() && (
               <div className="bg-slate-50 rounded-lg p-3">
                 <p className="text-xs text-slate-500 mb-1">表示名プレビュー</p>
-                <p className="text-sm font-medium text-slate-800">{newProjectForm.project_date}　{newProjectForm.project_title}</p>
+                <p className="text-sm font-medium text-slate-800">{dateStr}　{newProjectTitle.trim()}</p>
               </div>
             )}
+            {/* ボタン */}
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
                   setNewProjectDialogOpen(false);
-                  setNewProjectForm({ client_id: "", project_date: "", project_title: "" });
+                  setSelectedNewProjectClientId("");
+                  setNewProjectTitle("");
                   setSelectedRowForNewProject(null);
                 }}
                 disabled={saving}
