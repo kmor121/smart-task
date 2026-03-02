@@ -73,7 +73,7 @@ export default function ProjectsPage() {
   };
 
   const filteredProjects = Array.isArray(projects) ? projects.filter(p => 
-    p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.project_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.client_name?.toLowerCase().includes(searchTerm.toLowerCase())
   ) : [];
 
