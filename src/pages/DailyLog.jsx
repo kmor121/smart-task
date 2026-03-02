@@ -218,10 +218,10 @@ export default function DailyLog() {
   // 新規案件作成（顧客未選択でも可能）
   const handleCreateNewProject = async (rowIndex) => {
     setSelectedRowForNewProject(rowIndex);
-    // 該当行に顧客が既に選択されていればプリセット
     const currentRow = rows[rowIndex];
     const presetClientId = currentRow?.client_id || "";
-    
+    setSelectedNewProjectClientId(presetClientId);
+    setNewProjectTitle("");
     setNewProjectForm({ client_id: presetClientId, project_date: dateStr, project_title: "" });
     setNewProjectDialogOpen(true);
   };
