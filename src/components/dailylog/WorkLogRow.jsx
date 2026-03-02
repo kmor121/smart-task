@@ -166,6 +166,16 @@ export default function WorkLogRow({
               ))}
             </SelectContent>
           </Select>
+          {isSales && (
+            <button
+              type="button"
+              onClick={onCreateNewClient}
+              className="text-xs text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 cursor-pointer mt-1"
+            >
+              <Plus className="w-3 h-3" />
+              新規顧客作成
+            </button>
+          )}
         </div>
 
         {/* 案件（全部署で表示） */}
