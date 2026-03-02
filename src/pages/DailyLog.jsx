@@ -584,6 +584,7 @@ export default function DailyLog() {
                 onChange={handleRowChange}
                 onRemove={removeRow}
                 onCreateNewProject={() => handleCreateNewProject(index)}
+                onCreateNewClient={() => handleCreateNewClient(index)}
                 canRemove={rows.length > 1}
                 canManageProjects={canManageProjects}
                 onEditProject={(projectId) => {
