@@ -85,7 +85,7 @@ export default function ProjectsPage() {
     "仮案件": "bg-amber-100 text-amber-700"
   };
 
-  if (loading || isLoading) {
+  if (loading || projectsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-800 rounded-full animate-spin" />
