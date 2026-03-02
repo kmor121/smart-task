@@ -68,10 +68,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Project 作成（is_active・name は渡さない）
+    // Project 作成
     const projectData = {
       project_date,
       project_title,
+      client_id: clientId || null,
       client_name: clientName,
       status: status || '仮案件',
     };
