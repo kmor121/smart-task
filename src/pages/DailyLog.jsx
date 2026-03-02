@@ -288,13 +288,21 @@ export default function DailyLog() {
 
   const saveNewClient = async () => {
     if (!newClientName.trim()) {
-      toast.error("顧客名を入力してください");
+      alert("顧客名を入力してください");
       return;
     }
     setNewClientSaving(true);
     try {
-      const newClient = await base44.entities.Client.create({ name: newClientName.trim() });
+      console.log("顧客作成開始:", newClientName.trim());
+      const response = await base44.functions.invoke("createClient", { name: newClientName.trim() });
+      console.log("createClient response:", JSON.stringify(response?.data));
+      const newClient = response?.data?.client;
+      if (!newClient?.id) {
+        throw new Error(response?.data?.error || "顧客の作成に失敗しました");
+      }
+      // clients リストを再取得
       await queryClient.invalidateQueries({ queryKey: ['clients'] });
+      await queryClient.refetchQueries({ queryKey: ['clients'] });
       // 作成した顧客を該当行に自動選択
       if (newClientTargetRowIndex !== null) {
         handleRowChange(newClientTargetRowIndex, {
@@ -305,12 +313,13 @@ export default function DailyLog() {
           project_name: "",
         });
       }
-      toast.success(`顧客「${newClient.name}」を作成しました`);
+      alert("顧客を作成しました: " + newClient.name);
       setNewClientDialogOpen(false);
       setNewClientName("");
       setNewClientTargetRowIndex(null);
     } catch (error) {
-      toast.error(`顧客作成エラー: ${error.message}`);
+      console.error("顧客作成エラー:", error);
+      alert("エラー: " + error?.message);
     } finally {
       setNewClientSaving(false);
     }
