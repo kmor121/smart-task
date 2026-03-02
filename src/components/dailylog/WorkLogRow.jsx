@@ -16,6 +16,7 @@ export default function WorkLogRow({
   onChange,
   onRemove,
   onCreateNewProject,
+  onCreateNewClient,
   canRemove,
   canManageProjects,
   onEditProject
