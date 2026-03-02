@@ -75,6 +75,11 @@ export default function DailyLog() {
     }
   }, [clientsError, projectsError, clientsData, projectsData]);
   
+  const [newClientDialogOpen, setNewClientDialogOpen] = useState(false);
+  const [newClientName, setNewClientName] = useState("");
+  const [newClientSaving, setNewClientSaving] = useState(false);
+  const [newClientTargetRowIndex, setNewClientTargetRowIndex] = useState(null);
+
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [selectedNewProjectClientId, setSelectedNewProjectClientId] = useState("");
   const [newProjectTitle, setNewProjectTitle] = useState("");
