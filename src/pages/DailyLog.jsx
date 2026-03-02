@@ -254,7 +254,7 @@ export default function DailyLog() {
         client_id: selectedNewProjectClientId,
       });
 
-      const displayName = newProject.project_title || projectTitle;
+      const displayName = newProject.name || `${dateStr} ${projectTitle}`;
       const targetRowIndex = selectedRowForNewProject;
 
       handleRowChange(targetRowIndex, {
