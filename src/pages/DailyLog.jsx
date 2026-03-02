@@ -227,15 +227,11 @@ export default function DailyLog() {
   };
 
   const saveNewProject = async () => {
-    if (!newProjectForm.project_date) {
-      toast.error("日付を選択してください");
-      return;
-    }
-    if (!newProjectForm.client_id) {
+    if (!selectedNewProjectClientId) {
       toast.error("顧客を選択してください");
       return;
     }
-    if (!newProjectForm.project_title) {
+    if (!newProjectTitle.trim()) {
       toast.error("案件名を入力してください");
       return;
     }
@@ -243,14 +239,15 @@ export default function DailyLog() {
 
     setSaving(true);
     try {
-      const selectedClient = clients.find(c => c.id === newProjectForm.client_id);
+      const selectedClient = clients.find(c => c.id === selectedNewProjectClientId);
       const clientName = selectedClient?.name || "";
-      const projectTitle = newProjectForm.project_title.trim();
+      const projectTitle = newProjectTitle.trim();
+      const projectName = `${dateStr} ${projectTitle}`;
 
       const newProject = await base44.entities.Project.create({
-        project_date: newProjectForm.project_date,
+        project_date: dateStr,
         project_title: projectTitle,
-        client_id: newProjectForm.client_id,
+        client_id: selectedNewProjectClientId,
         client_name: clientName,
         status: "仮案件",
       });
@@ -258,22 +255,21 @@ export default function DailyLog() {
       const displayName = newProject.project_title || projectTitle;
       const targetRowIndex = selectedRowForNewProject;
 
-      // 該当行に即時反映
       handleRowChange(targetRowIndex, {
         ...rows[targetRowIndex],
-        client_id: newProjectForm.client_id,
+        client_id: selectedNewProjectClientId,
         client_name: clientName,
         project_id: String(newProject.id),
         project_name: displayName,
         is_temporary_project: true,
       });
 
-      // マスタデータを再取得
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
 
-      toast.success(`案件「${displayName}」を作成しました`);
+      toast.success(`案件「${projectName}」を作成しました`);
       setNewProjectDialogOpen(false);
-      setNewProjectForm({ client_id: "", project_date: "", project_title: "" });
+      setSelectedNewProjectClientId("");
+      setNewProjectTitle("");
       setSelectedRowForNewProject(null);
     } catch (error) {
       console.error("❌ Failed to create project:", error);
