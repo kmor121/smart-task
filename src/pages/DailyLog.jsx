@@ -247,12 +247,23 @@ export default function DailyLog() {
       const projectTitle = newProjectTitle.trim();
       const projectName = `${dateStr} ${projectTitle}`;
 
-      const newProject = await base44.entities.Project.create({
-        name: `${dateStr} ${projectTitle}`,
+      const response = await base44.functions.invoke("createProject", {
+        project_date: dateStr,
+        project_title: projectTitle,
         client_id: selectedNewProjectClientId,
+        client_name: clientName,
+        status: "仮案件",
       });
 
-      const displayName = newProject.name || `${dateStr} ${projectTitle}`;
+      console.log("createProject response:", JSON.stringify(response?.data));
+      const newProject = response?.data?.project;
+      if (!newProject?.id) {
+        throw new Error(response?.data?.error || "案件の作成に失敗しました");
+      }
+
+      const displayName = newProject.project_title
+        ? `${newProject.project_date} ${newProject.project_title}`
+        : projectName;
       const targetRowIndex = selectedRowForNewProject;
 
       handleRowChange(targetRowIndex, {
@@ -266,8 +277,8 @@ export default function DailyLog() {
 
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
 
-      toast.success(`案件「${projectName}」を作成しました`);
       alert("案件を作成しました: " + projectName);
+      toast.success(`案件「${projectName}」を作成しました`);
       setNewProjectDialogOpen(false);
       setSelectedNewProjectClientId("");
       setNewProjectTitle("");
@@ -275,8 +286,8 @@ export default function DailyLog() {
     } catch (error) {
       console.error("❌ Failed to create project:", error);
       const errorMsg = error.response?.data?.error || error.message || "作成できませんでした";
-      toast.error(`案件作成エラー: ${errorMsg}`);
       alert("エラー: " + error?.message);
+      toast.error(`案件作成エラー: ${errorMsg}`);
     } finally {
       setSaving(false);
     }
