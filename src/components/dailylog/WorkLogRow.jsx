@@ -208,7 +208,9 @@ export default function WorkLogRow({
               ) : (
                 filteredProjects.map(p => (
                   <SelectItem key={p.id} value={String(p.id)}>
-                    {p.name}
+                    {p.project_date && p.project_title
+                      ? `${p.project_date} ${p.project_title}`
+                      : (p.project_title || p.name || p.id)}
                   </SelectItem>
                 ))
               )}
