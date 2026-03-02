@@ -102,7 +102,7 @@ export default function ProjectsPage() {
             <h1 className="text-2xl font-bold text-slate-900">案件管理</h1>
             <p className="text-sm text-slate-500 mt-1">営業案件の一覧と管理</p>
           </div>
-          {isSales && (
+          {canView && (
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-blue-600 hover:bg-blue-700">
