@@ -196,7 +196,9 @@ export default function ProjectsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <CardTitle className="text-lg truncate">{project.name}</CardTitle>
+                        <CardTitle className="text-lg truncate">
+                          {project.project_date} {project.project_title}
+                        </CardTitle>
                         <Button
                           variant="ghost"
                           size="icon"
