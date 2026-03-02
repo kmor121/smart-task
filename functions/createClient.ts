@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     }
 
     console.log('顧客作成開始:', name, 'by', user.email);
-    const created = await base44.asServiceRole.entities.Client.create({ name, is_active: true });
+    const created = await base44.asServiceRole.entities.Client.create({ name });
     console.log('顧客作成完了:', JSON.stringify(created));
 
     return Response.json({ success: true, client: created });
