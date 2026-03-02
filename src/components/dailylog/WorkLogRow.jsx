@@ -88,10 +88,14 @@ export default function WorkLogRow({
   const filteredClients = clients.filter(c => c.is_active === true);
 
   // アクティブな案件のみ、選択中の顧客に紐づく案件のみ
+  // client_id が null の場合は client_name でもフォールバック照合
+  const selectedClient = clients.find(c => String(c.id) === String(row.client_id || ""));
   const filteredProjects = projects.filter(p => {
     if (p.is_active !== true) return false;
     if (!row.client_id) return false;
-    return String(p.client_id) === String(row.client_id);
+    if (p.client_id && String(p.client_id) === String(row.client_id)) return true;
+    if (!p.client_id && selectedClient && p.client_name === selectedClient.name) return true;
+    return false;
   });
 
   // 案件 options の value(id) 配列を作成（文字列に統一）
