@@ -652,6 +652,41 @@ export default function DailyLog() {
         </>
       )}
 
+      {/* 新規顧客作成モーダル */}
+      <Dialog open={newClientDialogOpen} onOpenChange={setNewClientDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>新規顧客作成</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">
+                顧客名 <span className="text-red-500">*</span>
+              </label>
+              <Input
+                value={newClientName}
+                onChange={(e) => setNewClientName(e.target.value)}
+                placeholder="顧客名を入力"
+                onKeyDown={(e) => e.key === "Enter" && saveNewClient()}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setNewClientDialogOpen(false); setNewClientName(""); }}
+                disabled={newClientSaving}
+              >
+                キャンセル
+              </Button>
+              <Button onClick={saveNewClient} disabled={newClientSaving}>
+                {newClientSaving ? "作成中..." : "作成"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* 新規案件作成モーダル */}
       <Dialog open={newProjectDialogOpen} onOpenChange={setNewProjectDialogOpen}>
         <DialogContent className="sm:max-w-md">
