@@ -83,7 +83,6 @@ export default function DailyLog() {
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [selectedNewProjectClientId, setSelectedNewProjectClientId] = useState("");
   const [newProjectTitle, setNewProjectTitle] = useState("");
-  const [newProjectForm, setNewProjectForm] = useState({ client_id: "", project_date: "", project_title: "" });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [editProjectDialogOpen, setEditProjectDialogOpen] = useState(false);
   const [editingProjectFromRow, setEditingProjectFromRow] = useState(null);
