@@ -33,7 +33,7 @@ export default function ProjectsPage() {
       const response = await base44.functions.invoke("getProjects", {});
       return response.data;
     },
-    enabled: !!user,
+    enabled: !!user && canView,
     initialData: { success: true, projects: [], count: 0 },
   });
 
