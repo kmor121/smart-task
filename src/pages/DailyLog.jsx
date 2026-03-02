@@ -267,6 +267,7 @@ export default function DailyLog() {
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
 
       toast.success(`案件「${projectName}」を作成しました`);
+      alert("案件を作成しました: " + projectName);
       setNewProjectDialogOpen(false);
       setSelectedNewProjectClientId("");
       setNewProjectTitle("");
@@ -275,6 +276,7 @@ export default function DailyLog() {
       console.error("❌ Failed to create project:", error);
       const errorMsg = error.response?.data?.error || error.message || "作成できませんでした";
       toast.error(`案件作成エラー: ${errorMsg}`);
+      alert("エラー: " + error?.message);
     } finally {
       setSaving(false);
     }
