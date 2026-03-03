@@ -22,6 +22,9 @@ export default function ProjectsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const { data: projectsData, isLoading: projectsLoading } = useQuery({
     queryKey: ['projects', user?.email],
