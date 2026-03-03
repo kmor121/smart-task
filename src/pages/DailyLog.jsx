@@ -716,71 +716,70 @@ export default function DailyLog() {
                   </div>
 
                   <div className="space-y-3">
-                    {/* 顧客・案件（営業部のみ） */}
-                    {isSales && (
-                      <>
-                        <div>
-                          <label className="text-xs text-slate-500 mb-1 block">顧客 <span className="text-red-400">*</span></label>
-                          <select
-                            value={row.client_id || ""}
-                            onChange={(e) => handleClientChange(e.target.value)}
-                            className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
-                          >
-                            <option value="">顧客を選択</option>
-                            {activeClients.map(c => (
-                              <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                          </select>
+                    {/* 顧客 */}
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1 block">顧客</label>
+                      <select
+                        value={row.client_id || ""}
+                        onChange={(e) => handleClientChange(e.target.value)}
+                        className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+                      >
+                        <option value="">顧客を選択</option>
+                        {activeClients.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      {canCreateProject && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCreateNewClient(index); }}
+                          className="mt-1 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" /> 新規顧客作成
+                        </button>
+                      )}
+                    </div>
+
+                    {/* 案件 */}
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1 block">案件</label>
+                      <select
+                        value={row.project_id || ""}
+                        onChange={(e) => handleProjectChange(e.target.value)}
+                        className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+                      >
+                        <option value="">案件を選択</option>
+                        {filteredProjects.map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.project_title ? `${p.project_date} ${p.project_title}` : p.name || p.id}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="mt-1 flex items-center gap-3">
+                        {canCreateProject && (
                           <button
                             type="button"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCreateNewClient(index); }}
-                            className="mt-1 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCreateNewProject(index); }}
+                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
                           >
-                            <Plus className="w-3 h-3" /> 新規顧客作成
+                            <Plus className="w-3 h-3" /> 新規案件作成
                           </button>
-                        </div>
-
-                        <div>
-                          <label className="text-xs text-slate-500 mb-1 block">案件 <span className="text-red-400">*</span></label>
-                          <select
-                            value={row.project_id || ""}
-                            onChange={(e) => handleProjectChange(e.target.value)}
-                            className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+                        )}
+                        {row.project_id && canCreateProject && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault(); e.stopPropagation();
+                              const project = projectsArr.find(p => p.id === row.project_id);
+                              if (project) { setEditingProjectFromRow(project); setEditProjectDialogOpen(true); }
+                            }}
+                            className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
                           >
-                            <option value="">案件を選択</option>
-                            {filteredProjects.map(p => (
-                              <option key={p.id} value={p.id}>
-                                {p.project_title ? `${p.project_date} ${p.project_title}` : p.name || p.id}
-                              </option>
-                            ))}
-                          </select>
-                          <div className="mt-1 flex items-center gap-3">
-                            {canCreateProject && (
-                              <button
-                                type="button"
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCreateNewProject(index); }}
-                                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                              >
-                                <Plus className="w-3 h-3" /> 新規案件作成
-                              </button>
-                            )}
-                            {row.project_id && canCreateProject && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault(); e.stopPropagation();
-                                  const project = projectsArr.find(p => p.id === row.project_id);
-                                  if (project) { setEditingProjectFromRow(project); setEditProjectDialogOpen(true); }
-                                }}
-                                className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
-                              >
-                                <Pencil className="w-3 h-3" /> 案件名を編集
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </>
-                    )}
+                            <Pencil className="w-3 h-3" /> 案件名を編集
+                          </button>
+                        )}
+                      </div>
+                    </div>
 
                     {/* 作業区分・作業時間 */}
                     <div className="grid grid-cols-2 gap-2">
