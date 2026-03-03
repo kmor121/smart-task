@@ -130,17 +130,6 @@ export default function MyLogs() {
         <p className="text-sm text-slate-500 mt-1">過去30日分の作業記録</p>
       </div>
 
-      {/* デバッグ表示 */}
-      {allLogs.length > 0 && console.log("sample log:", JSON.stringify(allLogs[0]))}
-      <div style={{background:'#fff3cd', padding:'8px', marginBottom:'8px', fontSize:'12px', borderRadius:'4px', lineHeight:'1.8'}}>
-        currentUser(effectiveEmail): "{effectiveEmail}"<br/>
-        全WorkLog件数: {allLogs.length}<br/>
-        表示件数: {workLogs.length}<br/>
-        1件目のuser_email: "{allLogs[0]?.user_email}"<br/>
-        一致?: {String(allLogs[0]?.user_email === effectiveEmail)}<br/>
-        全件のuser_email: {allLogs.map(l => l.user_email).join(', ')}
-      </div>
-
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 mb-6 bg-white rounded-xl border border-slate-200 p-4">
         <Select value={filterStatus} onValueChange={setFilterStatus}>
