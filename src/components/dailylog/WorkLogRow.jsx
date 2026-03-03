@@ -173,7 +173,7 @@ export default function WorkLogRow({
               ))}
             </SelectContent>
           </Select>
-          {isSales && (
+          {canManageProjects && (
             <button
               type="button"
               onClick={onCreateNewClient}
