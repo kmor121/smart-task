@@ -168,7 +168,7 @@ export default function DailyLog() {
     };
     return logs.map(log => {
       const row = {
-        _key: log.id,
+        _key: `${log.id}-${Date.now()}-${Math.random()}`,
         id: log.id,
         client_id: normalizeId(log.client_id),
         client_name: log.client_name || "",
