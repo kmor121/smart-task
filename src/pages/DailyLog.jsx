@@ -577,6 +577,36 @@ export default function DailyLog() {
         {isSubmitted && (
           <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">提出済</Badge>
         )}
+
+        <div className="flex items-center gap-1 ml-auto">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-slate-600"
+            onClick={() => setSelectedDate(prev => subDays(prev, 1))}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            前の日
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className={isToday(selectedDate) ? "bg-slate-900 text-white hover:bg-slate-800 border-slate-900" : ""}
+            onClick={() => setSelectedDate(new Date())}
+          >
+            今日
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-slate-600"
+            onClick={() => setSelectedDate(prev => addDays(prev, 1))}
+            disabled={isToday(selectedDate) || isFuture(selectedDate)}
+          >
+            次の日
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Loading */}
