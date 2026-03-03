@@ -221,7 +221,7 @@ export default function WorkLogRow({
             </SelectContent>
           </Select>
           <div className="flex items-center gap-2 mt-1">
-            {isSales && (
+            {canManageProjects && (
               <button
                 type="button"
                 onClick={onCreateNewProject}
