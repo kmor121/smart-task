@@ -80,23 +80,26 @@ export default function WorkLogRow({
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm relative">
-      {/* 削除ボタン（右上） */}
-      {canRemove && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onRemove(index);
-          }}
-          className="absolute top-3 right-3 p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
-          title="この行を削除"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      )}
+      {/* ヘッダー：タイトル＋削除ボタン */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-semibold text-slate-700">本日の作業 {index + 1}</p>
+        {canRemove && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRemove(index);
+            }}
+            className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+            title="この行を削除"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
-      <div className="space-y-3 pr-6">
+      <div className="space-y-3">
         {/* 顧客・案件（営業部のみ） */}
         {isSales && (
           <>
