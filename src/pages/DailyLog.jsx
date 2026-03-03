@@ -220,9 +220,29 @@ export default function DailyLog() {
     setHasLocalChanges(true);
   };
 
-  const removeRow = (index) => {
-    setRows(prev => prev.filter((_, i) => i !== index));
+  const removeRow = async (index) => {
+    const row = rows[index];
+    const rowId = row.id;
+
+    if (rowId) {
+      // 既存レコード：確認ダイアログ → DB削除
+      if (!window.confirm("この作業記録を削除しますか？この操作は取り消せません。")) return;
+      try {
+        await base44.entities.WorkLog.delete(rowId);
+        toast.success("作業記録を削除しました");
+      } catch (e) {
+        toast.error("削除に失敗しました");
+        return;
+      }
+    }
+
+    setRows(prev => {
+      const next = prev.filter((_, i) => i !== index);
+      return next.length > 0 ? next : [emptyRow()];
+    });
     setHasLocalChanges(true);
+    queryClient.invalidateQueries({ queryKey: ["workLogs"] });
+    queryClient.invalidateQueries({ queryKey: ["myLogsCount"] });
   };
 
   // 新規案件作成（顧客未選択でも可能）
