@@ -629,7 +629,7 @@ export default function DailyLog() {
           <div className="space-y-3 mb-4">
             {rows.map((row, index) => (
               <WorkLogRow
-                key={index}
+                key={row._key ?? index}
                 row={row}
                 index={index}
                 clients={clients}
