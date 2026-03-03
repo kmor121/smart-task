@@ -237,11 +237,12 @@ export default function DailyLog() {
       queryClient.invalidateQueries({ queryKey: ["myLogsCount"] });
     }
 
-    const newRows = rows.filter((_, i) => i !== index);
-    if (newRows.length === 0) {
-      setRows([emptyRow()]);
+    if (rows.length > 1) {
+      // 複数行ある場合は行ごと削除
+      setRows([...rows.filter((_, i) => i !== index)]);
     } else {
-      setRows([...newRows]);
+      // 1行だけの場合は内容をクリア
+      setRows([emptyRow()]);
     }
     setHasLocalChanges(true);
   };
