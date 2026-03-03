@@ -222,27 +222,28 @@ export default function DailyLog() {
 
   const removeRow = async (index) => {
     const row = rows[index];
-    const rowId = row.id;
 
-    if (rowId) {
-      // 既存レコード：確認ダイアログ → DB削除
-      if (!window.confirm("この作業記録を削除しますか？この操作は取り消せません。")) return;
+    if (row._id || row.id) {
+      const confirmed = window.confirm("この作業記録を削除しますか？この操作は取り消せません。");
+      if (!confirmed) return;
       try {
-        await base44.entities.WorkLog.delete(rowId);
+        await base44.entities.WorkLog.delete(row._id ?? row.id);
         toast.success("作業記録を削除しました");
       } catch (e) {
-        toast.error("削除に失敗しました");
+        alert("削除に失敗しました: " + e?.message);
         return;
       }
+      queryClient.invalidateQueries({ queryKey: ["workLogs"] });
+      queryClient.invalidateQueries({ queryKey: ["myLogsCount"] });
     }
 
-    setRows(prev => {
-      const next = prev.filter((_, i) => i !== index);
-      return next.length > 0 ? next : [emptyRow()];
-    });
+    const newRows = rows.filter((_, i) => i !== index);
+    if (newRows.length === 0) {
+      setRows([emptyRow()]);
+    } else {
+      setRows([...newRows]);
+    }
     setHasLocalChanges(true);
-    queryClient.invalidateQueries({ queryKey: ["workLogs"] });
-    queryClient.invalidateQueries({ queryKey: ["myLogsCount"] });
   };
 
   // 新規案件作成（顧客未選択でも可能）
