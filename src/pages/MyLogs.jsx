@@ -112,6 +112,22 @@ export default function MyLogs() {
     }
   };
 
+  const handleDelete = async (date, logs) => {
+    setDeletingDate(date);
+    try {
+      for (const log of logs) {
+        await base44.entities.WorkLog.delete(log._id ?? log.id);
+      }
+      queryClient.invalidateQueries({ queryKey: ["myWorkLogs"] });
+      toast.success("日報を削除しました");
+    } catch (e) {
+      toast.error("削除に失敗しました");
+    } finally {
+      setDeletingDate(null);
+      setConfirmDate(null);
+    }
+  };
+
   const getStatusBadge = (statusType) => {
     if (statusType === "未提出") {
       return <Badge variant="outline" className="text-slate-500 border-slate-300">未提出</Badge>;
