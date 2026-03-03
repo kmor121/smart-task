@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Clock, ChevronDown, ChevronUp, Loader2, Edit, FileText } from "lucide-react";
+import { Clock, ChevronDown, ChevronUp, Loader2, Edit, FileText, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "../utils";
 import useCurrentUser from "../components/hooks/useCurrentUser";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function MyLogs() {
   const { user, isAdmin } = useCurrentUser();
