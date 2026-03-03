@@ -20,6 +20,7 @@ import WorkLogRow from "../components/dailylog/WorkLogRow";
 import EditProjectDialog from "../components/projects/EditProjectDialog";
 
 const emptyRow = () => ({
+  _key: Date.now() + Math.random(),
   client_id: "",
   client_name: "",
   project_id: "",
