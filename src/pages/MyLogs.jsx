@@ -300,6 +300,35 @@ export default function MyLogs() {
           ))}
         </Accordion>
       )}
+
+      {/* 削除確認ダイアログ */}
+      {confirmDate && (() => {
+        const group = groupedByDate.find(g => g.date === confirmDate);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+              <h2 className="text-base font-semibold text-slate-900 mb-2">日報を削除しますか？</h2>
+              <p className="text-sm text-slate-600 mb-5">
+                {format(parseISO(confirmDate), "yyyy年M月d日(E)", { locale: ja })}の日報を削除しますか？<br />
+                この操作は取り消せません。
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setConfirmDate(null)} disabled={deletingDate === confirmDate}>
+                  キャンセル
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => handleDelete(confirmDate, group?.logs || [])}
+                  disabled={deletingDate === confirmDate}
+                >
+                  {deletingDate === confirmDate ? <Loader2 className="w-4 h-4 animate-spin" /> : "削除する"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
