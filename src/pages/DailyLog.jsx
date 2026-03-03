@@ -634,7 +634,7 @@ export default function DailyLog() {
                 onCreateNewProject={() => handleCreateNewProject(index)}
                 onCreateNewClient={() => handleCreateNewClient(index)}
                 canRemove={rows.length > 1}
-                canManageProjects={canManageProjects}
+                canManageProjects={canCreateProject}
                 onEditProject={(projectId) => {
                               const projectsArr = Array.isArray(projects) ? projects : [];
                               const project = projectsArr.find(p => p.id === projectId);
