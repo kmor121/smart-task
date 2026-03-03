@@ -36,6 +36,23 @@ export default function ProjectsPage() {
   });
 
   const projects = projectsData?.projects || [];
+  const canDelete = isSalesUser || isAdmin;
+
+  const handleDelete = async () => {
+    if (!deletingProject) return;
+    setDeleting(true);
+    try {
+      await base44.entities.Project.delete(deletingProject._id ?? deletingProject.id);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success("案件を削除しました");
+      setDeleteDialogOpen(false);
+      setDeletingProject(null);
+    } catch (e) {
+      toast.error("削除に失敗しました");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const filteredProjects = Array.isArray(projects) ? projects.filter(p =>
     p.project_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
