@@ -116,6 +116,19 @@ export default function ProjectsPage() {
                         >
                           <Pencil className="w-3.5 h-3.5 text-slate-500" />
                         </Button>
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 flex-shrink-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => {
+                              setDeletingProject(project);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                       </div>
                       <p className="text-sm text-slate-500 mt-1">顧客: {project.client_name}</p>
                     </div>
