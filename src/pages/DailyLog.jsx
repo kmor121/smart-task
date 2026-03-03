@@ -558,7 +558,7 @@ export default function DailyLog() {
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2 font-medium">
+            <Button type="button" variant="outline" className="gap-2 font-medium">
               <CalendarIcon className="w-4 h-4" />
               {format(selectedDate, "yyyy年M月d日(E)", { locale: ja })}
             </Button>
@@ -584,6 +584,7 @@ export default function DailyLog() {
 
         <div className="flex items-center gap-1 ml-auto">
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             className="gap-1 text-slate-600"
@@ -593,6 +594,7 @@ export default function DailyLog() {
             前の日
           </Button>
           <Button
+            type="button"
             variant="outline"
             size="sm"
             className={isToday(selectedDate) ? "bg-slate-900 text-white hover:bg-slate-800 border-slate-900" : ""}
@@ -601,6 +603,7 @@ export default function DailyLog() {
             今日
           </Button>
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             className="gap-1 text-slate-600"
@@ -639,8 +642,8 @@ export default function DailyLog() {
                 canRemove={rows.length > 1}
                 canManageProjects={canCreateProject}
                 onEditProject={(projectId) => {
-                              const projectsArr = Array.isArray(projects) ? projects : [];
-                              const project = projectsArr.find(p => p.id === projectId);
+                  const projectsArr = Array.isArray(projects) ? projects : [];
+                  const project = projectsArr.find(p => p.id === projectId);
                   if (project) {
                     setEditingProjectFromRow(project);
                     setEditProjectDialogOpen(true);
@@ -652,11 +655,11 @@ export default function DailyLog() {
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2 mb-8">
-            <Button variant="outline" size="sm" onClick={addRow} className="gap-1.5">
+            <Button type="button" variant="outline" size="sm" onClick={addRow} className="gap-1.5">
               <Plus className="w-3.5 h-3.5" />
               作業を追加する
             </Button>
-            <Button variant="outline" size="sm" onClick={copyPreviousDay} className="gap-1.5">
+            <Button type="button" variant="outline" size="sm" onClick={copyPreviousDay} className="gap-1.5">
               <Copy className="w-3.5 h-3.5" />
               前回の作業をコピー
             </Button>
@@ -665,6 +668,7 @@ export default function DailyLog() {
           {/* Save / Submit */}
           <div className="flex gap-3 sticky bottom-4 bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-slate-200 shadow-lg">
             <Button
+              type="button"
               variant="outline"
               onClick={() => saveWorkLogs("下書き")}
               disabled={saving || submitting}
@@ -674,6 +678,7 @@ export default function DailyLog() {
               下書き保存
             </Button>
             <Button
+              type="button"
               onClick={() => saveWorkLogs("提出済")}
               disabled={
                 saving || 
@@ -698,8 +703,6 @@ export default function DailyLog() {
               {submitting ? "提出中…" : isSubmitted && !hasLocalChanges ? "提出済" : isResubmit ? "再提出" : "提出"}
             </Button>
           </div>
-
-
         </>
       )}
 
@@ -730,7 +733,7 @@ export default function DailyLog() {
               >
                 キャンセル
               </Button>
-              <Button onClick={saveNewClient} disabled={newClientSaving}>
+              <Button type="button" onClick={saveNewClient} disabled={newClientSaving}>
                 {newClientSaving ? "作成中..." : "作成"}
               </Button>
             </div>
@@ -794,7 +797,7 @@ export default function DailyLog() {
               >
                 キャンセル
               </Button>
-              <Button onClick={saveNewProject} disabled={saving}>
+              <Button type="button" onClick={saveNewProject} disabled={saving}>
                 {saving ? "作成中..." : "作成"}
               </Button>
             </div>
@@ -808,10 +811,7 @@ export default function DailyLog() {
         onOpenChange={setEditProjectDialogOpen}
         project={editingProjectFromRow}
         onSuccess={async () => {
-          // 案件一覧を再取得して即座に反映
           await refreshProjects();
-          
-          // 選択中の案件IDを維持したまま、名前だけ更新
           const updatedProject = projects.find(p => p.id === editingProjectFromRow?.id);
           if (updatedProject) {
             console.log('✅ Project name updated in dropdown:', updatedProject.name);
@@ -829,6 +829,7 @@ export default function DailyLog() {
             <h2 className="text-xl font-bold text-slate-900">日報を提出しました！</h2>
             <div className="flex flex-col w-full gap-2 pt-2">
               <Button
+                type="button"
                 onClick={() => setShowSuccessModal(false)}
                 variant="outline"
                 className="w-full"
@@ -836,6 +837,7 @@ export default function DailyLog() {
                 編集を続ける
               </Button>
               <Button
+                type="button"
                 onClick={() => navigate(createPageUrl("MyLogs"))}
                 className="w-full bg-slate-900 hover:bg-slate-800"
               >
