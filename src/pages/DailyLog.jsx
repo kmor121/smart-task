@@ -14,9 +14,9 @@ import { CalendarIcon, Plus, Copy, Save, Send, Clock, Loader2, CheckCircle2, Che
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "../utils";
+import { Trash2, Pencil } from "lucide-react";
 import useCurrentUser from "../components/hooks/useCurrentUser";
 import useMasterData from "../components/hooks/useMasterData";
-import WorkLogRow from "../components/dailylog/WorkLogRow";
 import EditProjectDialog from "../components/projects/EditProjectDialog";
 
 const emptyRow = () => ({
