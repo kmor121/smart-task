@@ -246,6 +246,18 @@ export default function MyLogs() {
                       <Edit className="w-3.5 h-3.5" />
                       編集
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmDate(group.date);
+                      }}
+                      className="gap-1.5 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      削除
+                    </Button>
                   </div>
                 </div>
               </AccordionTrigger>
