@@ -1,14 +1,13 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import useCurrentUser from "../components/hooks/useCurrentUser";
 import useMasterData from "../components/hooks/useMasterData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Building2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import EditProjectDialog from "../components/projects/EditProjectDialog";
@@ -23,7 +22,7 @@ export default function ProjectsPage() {
   const { refreshProjects } = useMasterData();
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: "", client_name: "", status: "見込み" });
+  const [formData, setFormData] = useState({ project_title: "", client_id: "", client_name: "" });
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
 
@@ -36,12 +35,21 @@ export default function ProjectsPage() {
     enabled: !!user && canView,
   });
 
+  const { data: clientsData } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      const response = await base44.functions.invoke("getClients", {});
+      return response.data;
+    },
+    enabled: !!user,
+  });
+
   const projects = projectsData?.projects || [];
+  const clients = clientsData?.clients?.filter(c => c.is_active !== false) || [];
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
       const response = await base44.functions.invoke('createProject', data);
-      console.log('Project creation response:', response.data);
       if (!response.data?.success) {
         throw new Error(response.data?.error || "案件の作成に失敗しました");
       }
@@ -49,41 +57,36 @@ export default function ProjectsPage() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
       setDialogOpen(false);
-      setFormData({ name: "", client_name: "", status: "見込み" });
-      console.log('✅ Project created:', data.project);
-      toast.success(`案件「${data.project.name}」を作成しました`);
+      setFormData({ project_title: "", client_id: "", client_name: "" });
+      toast.success(`案件を作成しました`);
     },
     onError: (error) => {
-      console.error('❌ Project creation error:', error);
-      const errorMsg = error.response?.data?.error || error.response?.data?.details || error.message || "案件の作成に失敗しました";
+      const errorMsg = error.message || "案件の作成に失敗しました";
       toast.error(`エラー: ${errorMsg}`);
     }
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.client_name) {
-      toast.error("案件名と顧客名は必須です");
+    if (!formData.project_title || !formData.client_id) {
+      toast.error("案件名と顧客は必須です");
       return;
     }
-    createMutation.mutate(formData);
+    const today = format(new Date(), "yyyy-MM-dd");
+    createMutation.mutate({
+      project_date: today,
+      project_title: formData.project_title,
+      client_id: formData.client_id,
+      client_name: formData.client_name,
+      status: "見込み",
+    });
   };
 
-  const filteredProjects = Array.isArray(projects) ? projects.filter(p => 
+  const filteredProjects = Array.isArray(projects) ? projects.filter(p =>
     p.project_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.client_name?.toLowerCase().includes(searchTerm.toLowerCase())
   ) : [];
-
-  const statusColors = {
-    "見込み": "bg-slate-100 text-slate-700",
-    "進行中": "bg-blue-100 text-blue-700",
-    "受注": "bg-green-100 text-green-700",
-    "失注": "bg-red-100 text-red-700",
-    "完了": "bg-gray-100 text-gray-700",
-    "仮案件": "bg-amber-100 text-amber-700"
-  };
 
   if (loading || projectsLoading) {
     return (
@@ -119,37 +122,28 @@ export default function ProjectsPage() {
                       案件名 <span className="text-red-500">*</span>
                     </label>
                     <Input
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      value={formData.project_title}
+                      onChange={(e) => setFormData({ ...formData, project_title: e.target.value })}
                       placeholder="案件名を入力"
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-slate-700 mb-1 block">
-                      顧客名 <span className="text-red-500">*</span>
+                      顧客 <span className="text-red-500">*</span>
                     </label>
-                    <Input
-                      value={formData.client_name}
-                      onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                      placeholder="顧客名を入力"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-700 mb-1 block">
-                      ステータス
-                    </label>
-                    <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="見込み">見込み</SelectItem>
-                        <SelectItem value="進行中">進行中</SelectItem>
-                        <SelectItem value="受注">受注</SelectItem>
-                        <SelectItem value="失注">失注</SelectItem>
-                        <SelectItem value="完了">完了</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <select
+                      value={formData.client_id}
+                      onChange={(e) => {
+                        const selected = clients.find(c => c.id === e.target.value);
+                        setFormData({ ...formData, client_id: e.target.value, client_name: selected?.name || "" });
+                      }}
+                      className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+                    >
+                      <option value="">顧客を選択</option>
+                      {clients.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="flex justify-end gap-2 pt-2">
                     <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
@@ -212,9 +206,6 @@ export default function ProjectsPage() {
                       </div>
                       <p className="text-sm text-slate-500 mt-1">顧客: {project.client_name}</p>
                     </div>
-                    <Badge className={statusColors[project.status] || statusColors["見込み"]}>
-                      {project.status}
-                    </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -229,13 +220,11 @@ export default function ProjectsPage() {
         )}
       </div>
 
-      {/* 案件名編集モーダル */}
       <EditProjectDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         project={editingProject}
         onSuccess={async () => {
-          // 案件一覧を即座に再取得
           await refreshProjects();
           queryClient.invalidateQueries({ queryKey: ["projects"] });
         }}
