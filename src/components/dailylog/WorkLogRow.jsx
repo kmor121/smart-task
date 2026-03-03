@@ -184,27 +184,27 @@ export default function WorkLogRow({
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-xs text-slate-500 mb-1 block">作業区分 <span className="text-red-400">*</span></label>
-            <Select value={row.work_category_id || ""} onValueChange={handleCategoryChange}>
-              <SelectTrigger className="w-full text-sm">
-                <SelectValue placeholder="作業区分を選択" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredCategories.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={row.work_category_id || ""}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+            >
+              <option value="">作業区分を選択</option>
+              {filteredCategories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="text-xs text-slate-500 mb-1 block">作業時間（分） <span className="text-red-400">*</span></label>
-            <Input
+            <input
               type="number"
               min={0}
               step={1}
-              value={row.duration_minutes || ""}
+              value={row.duration_minutes === 0 ? "" : row.duration_minutes}
               onChange={(e) => handleChange("duration_minutes", Number(e.target.value))}
               placeholder="例: 60"
-              className="text-sm"
+              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
             />
           </div>
         </div>
