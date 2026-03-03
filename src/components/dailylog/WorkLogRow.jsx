@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Plus, Pencil } from "lucide-react";
 
@@ -26,10 +27,6 @@ export default function WorkLogRow({
   };
 
   const handleClientChange = (clientId) => {
-    if (clientId === "__new__") {
-      onCreateNewClient();
-      return;
-    }
     const client = (Array.isArray(clients) ? clients : []).find(c => c.id === clientId);
     onChange(index, {
       ...row,
@@ -41,10 +38,6 @@ export default function WorkLogRow({
   };
 
   const handleProjectChange = (projectId) => {
-    if (projectId === "__new__") {
-      onCreateNewProject();
-      return;
-    }
     const projectsArr = Array.isArray(projects) ? projects : [];
     const project = projectsArr.find(p => p.id === projectId);
     onChange(index, {
@@ -85,141 +78,145 @@ export default function WorkLogRow({
     ? projectsArr.filter(p => p.is_active !== false && p.client_id === row.client_id)
     : projectsArr.filter(p => p.is_active !== false);
 
-  const isMissing = (field) => {
-    if (isSales) {
-      return !row.client_id || !row.project_id || !row.work_category_id || !row.duration_minutes;
-    }
-    return !row.work_category_id || !row.duration_minutes;
-  };
-
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-sm">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-slate-400">作業 {index + 1}</span>
-        {canRemove && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onRemove(index);
-            }}
-            className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
-            title="この行を削除"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      {/* 顧客・案件（営業部または全部署） */}
-      {isSales && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {/* 顧客 */}
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">顧客 <span className="text-red-400">*</span></label>
-            <Select value={row.client_id || ""} onValueChange={handleClientChange}>
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="顧客を選択" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeClients.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-                <SelectItem value="__new__">
-                  <span className="text-blue-600 flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> 新規顧客作成
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 案件 */}
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">
-              案件 <span className="text-red-400">*</span>
-              {row.project_id && canManageProjects && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onEditProject(row.project_id);
-                  }}
-                  className="ml-2 text-slate-400 hover:text-slate-600"
-                  title="案件名を編集"
-                >
-                  <Pencil className="w-3 h-3 inline" />
-                </button>
-              )}
-            </label>
-            <Select value={row.project_id || ""} onValueChange={handleProjectChange}>
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="案件を選択" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredProjects.map(p => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.project_title
-                      ? `${p.project_date} ${p.project_title}`
-                      : p.name || p.project_title || p.id}
-                  </SelectItem>
-                ))}
-                {canManageProjects && (
-                  <SelectItem value="__new__">
-                    <span className="text-blue-600 flex items-center gap-1">
-                      <Plus className="w-3 h-3" /> 新規案件作成
-                    </span>
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm relative">
+      {/* 削除ボタン（右上） */}
+      {canRemove && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onRemove(index);
+          }}
+          className="absolute top-3 right-3 p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+          title="この行を削除"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       )}
 
-      {/* 作業区分・作業時間 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {/* 作業区分 */}
-        <div>
-          <label className="text-xs text-slate-500 mb-1 block">作業区分 <span className="text-red-400">*</span></label>
-          <Select value={row.work_category_id || ""} onValueChange={handleCategoryChange}>
-            <SelectTrigger className="text-sm">
-              <SelectValue placeholder="作業区分を選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredCategories.map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="space-y-3 pr-6">
+        {/* 顧客・案件（営業部のみ） */}
+        {isSales && (
+          <>
+            {/* 顧客セレクト（全幅） */}
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">顧客 <span className="text-red-400">*</span></label>
+              <Select value={row.client_id || ""} onValueChange={handleClientChange}>
+                <SelectTrigger className="w-full text-sm">
+                  <SelectValue placeholder="顧客を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeClients.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {/* + 新規顧客作成 */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCreateNewClient();
+                }}
+                className="mt-1 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> 新規顧客作成
+              </button>
+            </div>
+
+            {/* 案件セレクト（全幅） */}
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">案件 <span className="text-red-400">*</span></label>
+              <Select value={row.project_id || ""} onValueChange={handleProjectChange}>
+                <SelectTrigger className="w-full text-sm">
+                  <SelectValue placeholder="案件を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredProjects.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.project_title
+                        ? `${p.project_date} ${p.project_title}`
+                        : p.name || p.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {/* + 新規案件作成 / 案件名を編集 */}
+              <div className="mt-1 flex items-center gap-3">
+                {canManageProjects && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onCreateNewProject();
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" /> 新規案件作成
+                  </button>
+                )}
+                {row.project_id && canManageProjects && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onEditProject(row.project_id);
+                    }}
+                    className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
+                  >
+                    <Pencil className="w-3 h-3" /> 案件名を編集
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* 作業区分（左半分）・作業時間（右半分） */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">作業区分 <span className="text-red-400">*</span></label>
+            <Select value={row.work_category_id || ""} onValueChange={handleCategoryChange}>
+              <SelectTrigger className="w-full text-sm">
+                <SelectValue placeholder="作業区分を選択" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredCategories.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">作業時間（分） <span className="text-red-400">*</span></label>
+            <Input
+              type="number"
+              min={0}
+              step={1}
+              value={row.duration_minutes || ""}
+              onChange={(e) => handleChange("duration_minutes", Number(e.target.value))}
+              placeholder="例: 60"
+              className="text-sm"
+            />
+          </div>
         </div>
 
-        {/* 作業時間（分） */}
+        {/* 作業詳細（全幅） */}
         <div>
-          <label className="text-xs text-slate-500 mb-1 block">作業時間（分） <span className="text-red-400">*</span></label>
-          <Input
-            type="number"
-            min={0}
-            step={1}
-            value={row.duration_minutes || ""}
-            onChange={(e) => handleChange("duration_minutes", Number(e.target.value))}
-            placeholder="例: 60"
-            className="text-sm"
+          <label className="text-xs text-slate-500 mb-1 block">作業詳細</label>
+          <Textarea
+            value={row.description || ""}
+            onChange={(e) => handleChange("description", e.target.value)}
+            placeholder="作業内容の詳細（任意）"
+            className="text-sm resize-none"
+            rows={2}
           />
         </div>
-      </div>
-
-      {/* 作業詳細 */}
-      <div>
-        <label className="text-xs text-slate-500 mb-1 block">作業詳細</label>
-        <Input
-          value={row.description || ""}
-          onChange={(e) => handleChange("description", e.target.value)}
-          placeholder="作業内容の詳細（任意）"
-          className="text-sm"
-        />
       </div>
     </div>
   );
