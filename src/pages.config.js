@@ -47,14 +47,30 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import AdminData from './pages/AdminData';
 import DailyLog from './pages/DailyLog';
+import Dashboard from './pages/Dashboard';
+import MasterData from './pages/MasterData';
+import MyLogs from './pages/MyLogs';
+import Projects from './pages/Projects';
+import Reassign from './pages/Reassign';
+import TeamDailyLog from './pages/TeamDailyLog';
+import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "AdminData": AdminData,
     "DailyLog": DailyLog,
+    "Dashboard": Dashboard,
+    "MasterData": MasterData,
+    "MyLogs": MyLogs,
+    "Projects": Projects,
+    "Reassign": Reassign,
+    "TeamDailyLog": TeamDailyLog,
 }
 
 export const pagesConfig = {
     mainPage: "DailyLog",
     Pages: PAGES,
+    Layout: __Layout,
 };
