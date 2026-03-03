@@ -18,9 +18,12 @@ export default function MyLogs() {
   const { user, isAdmin } = useCurrentUser();
   const navigate = useNavigate();
 
+  const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState("all");
   const [expandedItems, setExpandedItems] = useState([]);
   const [showAllUsers, setShowAllUsers] = useState(false);
+  const [deletingDate, setDeletingDate] = useState(null);
+  const [confirmDate, setConfirmDate] = useState(null);
 
   // 有効なメール（impersonate中はそちらを優先）
   const effectiveEmail = user?.email || "";
