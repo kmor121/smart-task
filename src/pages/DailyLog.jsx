@@ -33,7 +33,8 @@ const emptyRow = () => ({
 });
 
 export default function DailyLog() {
-  const { user, isSales, canManageProjects } = useCurrentUser();
+  const { user, isSales, isAdmin, canManageProjects } = useCurrentUser();
+  const canCreateProject = isSales || isAdmin || user?.isAdmin === true;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
