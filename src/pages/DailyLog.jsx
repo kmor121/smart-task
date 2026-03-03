@@ -627,32 +627,183 @@ export default function DailyLog() {
         <>
           {/* Work log rows */}
           <div className="space-y-3 mb-4">
-            {rows.map((row, index) => (
-              <WorkLogRow
-                key={row._key ?? index}
-                row={row}
-                index={index}
-                clients={clients}
-                projects={projects}
-                workCategories={workCategories}
-                userDepartmentCode={user.department_code || ""}
-                isSales={isSales}
-                onChange={handleRowChange}
-                onRemove={removeRow}
-                onCreateNewProject={() => handleCreateNewProject(index)}
-                onCreateNewClient={() => handleCreateNewClient(index)}
-                canRemove={rows.length > 1}
-                canManageProjects={canCreateProject}
-                onEditProject={(projectId) => {
-                  const projectsArr = Array.isArray(projects) ? projects : [];
-                  const project = projectsArr.find(p => p.id === projectId);
-                  if (project) {
-                    setEditingProjectFromRow(project);
-                    setEditProjectDialogOpen(true);
-                  }
-                }}
-              />
-            ))}
+            {rows.map((row, index) => {
+              const activeClients = (Array.isArray(clients) ? clients : []).filter(c => c.is_active !== false);
+              const projectsArr = Array.isArray(projects) ? projects : [];
+              const filteredProjects = row.client_id
+                ? projectsArr.filter(p => p.is_active !== false && p.client_id === row.client_id)
+                : projectsArr.filter(p => p.is_active !== false);
+              const filteredCategories = (Array.isArray(workCategories) ? workCategories : []).filter(c => {
+                if (c.is_active === false) return false;
+                if (!c.department_code) return true;
+                return c.department_code === (user.department_code || "");
+              });
+
+              const updateRow = (fields) => {
+                handleRowChange(index, { ...row, ...fields });
+              };
+
+              const handleClientChange = (clientId) => {
+                const client = activeClients.find(c => c.id === clientId);
+                handleRowChange(index, {
+                  ...row,
+                  client_id: clientId,
+                  client_name: client?.name || "",
+                  project_id: "",
+                  project_name: "",
+                });
+              };
+
+              const handleProjectChange = (projectId) => {
+                const project = projectsArr.find(p => p.id === projectId);
+                handleRowChange(index, {
+                  ...row,
+                  project_id: projectId,
+                  project_name: project
+                    ? (project.project_title ? `${project.project_date} ${project.project_title}` : project.name || "")
+                    : "",
+                  is_temporary_project: project?.status === "仮案件" || false,
+                });
+              };
+
+              const handleCategoryChange = (categoryId) => {
+                const category = filteredCategories.find(c => c.id === categoryId);
+                handleRowChange(index, {
+                  ...row,
+                  work_category_id: categoryId,
+                  work_category_name: category?.name || "",
+                  is_revision: category?.is_revision || false,
+                });
+              };
+
+              return (
+                <div key={row._key} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                  {/* ヘッダー */}
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-slate-700">本日の作業 {index + 1}</p>
+                    {rows.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeRow(index); }}
+                        className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                        title="この行を削除"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* 顧客・案件（営業部のみ） */}
+                    {isSales && (
+                      <>
+                        <div>
+                          <label className="text-xs text-slate-500 mb-1 block">顧客 <span className="text-red-400">*</span></label>
+                          <select
+                            value={row.client_id || ""}
+                            onChange={(e) => handleClientChange(e.target.value)}
+                            className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+                          >
+                            <option value="">顧客を選択</option>
+                            {activeClients.map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCreateNewClient(index); }}
+                            className="mt-1 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" /> 新規顧客作成
+                          </button>
+                        </div>
+
+                        <div>
+                          <label className="text-xs text-slate-500 mb-1 block">案件 <span className="text-red-400">*</span></label>
+                          <select
+                            value={row.project_id || ""}
+                            onChange={(e) => handleProjectChange(e.target.value)}
+                            className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+                          >
+                            <option value="">案件を選択</option>
+                            {filteredProjects.map(p => (
+                              <option key={p.id} value={p.id}>
+                                {p.project_title ? `${p.project_date} ${p.project_title}` : p.name || p.id}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="mt-1 flex items-center gap-3">
+                            {canCreateProject && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCreateNewProject(index); }}
+                                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                              >
+                                <Plus className="w-3 h-3" /> 新規案件作成
+                              </button>
+                            )}
+                            {row.project_id && canCreateProject && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault(); e.stopPropagation();
+                                  const project = projectsArr.find(p => p.id === row.project_id);
+                                  if (project) { setEditingProjectFromRow(project); setEditProjectDialogOpen(true); }
+                                }}
+                                className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
+                              >
+                                <Pencil className="w-3 h-3" /> 案件名を編集
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* 作業区分・作業時間 */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">作業区分 <span className="text-red-400">*</span></label>
+                        <select
+                          value={row.work_category_id || ""}
+                          onChange={(e) => handleCategoryChange(e.target.value)}
+                          className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+                        >
+                          <option value="">作業区分を選択</option>
+                          {filteredCategories.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">作業時間（分） <span className="text-red-400">*</span></label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={row.duration_minutes === 0 ? "" : row.duration_minutes}
+                          onChange={(e) => updateRow({ duration_minutes: Number(e.target.value) })}
+                          placeholder="例: 60"
+                          className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 作業詳細 */}
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1 block">作業詳細</label>
+                      <textarea
+                        value={row.description || ""}
+                        onChange={(e) => updateRow({ description: e.target.value })}
+                        placeholder="作業内容の詳細（任意）"
+                        className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-400"
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Actions */}
