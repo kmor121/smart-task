@@ -59,7 +59,10 @@ export default function DailyLog() {
 
   const { data: workCategories = [] } = useQuery({
     queryKey: ["workCategories"],
-    queryFn: () => base44.entities.WorkCategory.list(),
+    queryFn: async () => {
+      const categories = await base44.entities.WorkCategory.list('sort_order', 1000);
+      return categories.sort((a, b) => (a.sort_order ?? 99) - (b.sort_order ?? 99));
+    },
     initialData: [],
   });
 
