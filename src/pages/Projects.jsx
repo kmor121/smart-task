@@ -144,28 +144,6 @@ export default function ProjectsPage() {
         )}
       </div>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>案件を削除しますか？</AlertDialogTitle>
-            <AlertDialogDescription>
-              「{deletingProject?.project_date} {deletingProject?.project_title}」を削除しますか？<br />
-              この操作は取り消せません。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>キャンセル</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleting}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {deleting ? "削除中..." : "削除"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <EditProjectDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
