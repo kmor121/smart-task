@@ -133,7 +133,7 @@ export default function Dashboard() {
   if (!user) return null;
 
   // 非管理者・非部長は自分の日報へリダイレクト
-  if (!isAdmin && !isManager) {
+  if (!effectiveIsAdmin && !effectiveIsManager) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
         <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
