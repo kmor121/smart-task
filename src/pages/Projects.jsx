@@ -13,16 +13,13 @@ import EditProjectDialog from "../components/projects/EditProjectDialog";
 
 export default function ProjectsPage() {
   const { user, loading, isAdmin, isSales, isSubAdmin, canManageProjects } = useCurrentUser();
-  const canDelete = isAdmin || isSales;
-  const canView = canDelete || isSubAdmin;
+  const canToggle = isAdmin || isSales;
   const queryClient = useQueryClient();
   const { refreshProjects } = useMasterData();
   const [searchTerm, setSearchTerm] = useState("");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletingProject, setDeletingProject] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  const [toggling, setToggling] = useState(false);
 
   const { data: projectsData, isLoading: projectsLoading } = useQuery({
     queryKey: ['projects', user?.email],
