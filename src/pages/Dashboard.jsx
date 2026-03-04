@@ -59,7 +59,7 @@ export default function Dashboard() {
       if (filters.clientId && log.client_id !== filters.clientId) return false;
       
       // 部署フィルタ：部長の場合は自部署のみ強制
-      const targetDeptCode = isManager ? user?.department_code : filters.departmentCode;
+      const targetDeptCode = effectiveIsManager ? effectiveDeptCode : filters.departmentCode;
       if (targetDeptCode && targetDeptCode !== "") {
         // まず department_code を取得
         let logDeptCode = log.department_code;
