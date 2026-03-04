@@ -155,7 +155,7 @@ export default function Dashboard() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">工数集計</h1>
         <p className="text-sm text-slate-500 mt-1">
-          {isManager ? "自部署の工数集計" : "全員の工数集計"}
+          {effectiveIsManager ? "自部署の工数集計" : "全員の工数集計"}
         </p>
       </div>
 
