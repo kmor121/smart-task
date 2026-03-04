@@ -36,8 +36,19 @@ function TeamDailyLogInner({ user, isAdmin, isManager }) {
   const today = new Date();
   const [dateFrom, setDateFrom] = useState(subDays(today, 6));
   const [dateTo, setDateTo] = useState(today);
+
+  // impersonate中の部署コードを取得
+  const impersonateUserEmail = sessionStorage.getItem("impersonate_user_email");
+  const impersonateUserData = impersonateUserEmail
+    ? (() => { try { return JSON.parse(localStorage.getItem("impersonateUser") || "{}"); } catch { return {}; } })()
+    : null;
+  const effectiveDeptCode = impersonateUserData?.department_code || user?.department_code;
+  const effectiveIsManager = impersonateUserData
+    ? (impersonateUserData.app_role === "部長" || impersonateUserData.app_role === "副管理者")
+    : isManager;
+
   const [departmentFilter, setDepartmentFilter] = useState(
-    isManager && !isAdmin ? (user?.department_code || "all") : "all"
+    (effectiveIsManager && !isAdmin) ? (effectiveDeptCode || "all") : "all"
   );
   const [submitFilter, setSubmitFilter] = useState("all");
   const [allOpen, setAllOpen] = useState(true);
