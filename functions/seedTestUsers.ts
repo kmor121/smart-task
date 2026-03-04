@@ -1,4 +1,19 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+
+const testUsers = [
+  { email: 'test_sales01@example.com',      full_name: 'テスト_営業_一般',   department_code: 'sales',       app_role: '一般' },
+  { email: 'test_sales_mgr@example.com',    full_name: 'テスト_営業_部長',   department_code: 'sales',       app_role: '部長' },
+  { email: 'test_design01@example.com',     full_name: 'テスト_制作_一般',   department_code: 'design',      app_role: '一般' },
+  { email: 'test_design_mgr@example.com',   full_name: 'テスト_制作_部長',   department_code: 'design',      app_role: '部長' },
+  { email: 'test_ict01@example.com',        full_name: 'テスト_ICT_一般',    department_code: 'ict',         app_role: '一般' },
+  { email: 'test_ict_mgr@example.com',      full_name: 'テスト_ICT_部長',    department_code: 'ict',         app_role: '部長' },
+  { email: 'test_printing01@example.com',   full_name: 'テスト_印刷_一般',   department_code: 'printing',    app_role: '一般' },
+  { email: 'test_printing_mgr@example.com', full_name: 'テスト_印刷_部長',   department_code: 'printing',    app_role: '部長' },
+  { email: 'test_production01@example.com', full_name: 'テスト_製本_一般',   department_code: 'production',  app_role: '一般' },
+  { email: 'test_production_mgr@example.com', full_name: 'テスト_製本_部長', department_code: 'production',  app_role: '部長' },
+  { email: 'test_admin01@example.com',      full_name: 'テスト_総務_一般',   department_code: 'admin',       app_role: '一般' },
+  { email: 'test_admin_mgr@example.com',    full_name: 'テスト_総務_部長',   department_code: 'admin',       app_role: '部長' },
+];
 
 Deno.serve(async (req) => {
   try {
@@ -9,108 +24,52 @@ Deno.serve(async (req) => {
       return Response.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    // Admin のみ実行可能
     const isAdmin = user.role === 'admin' || user.isAdmin === true || user.isOwner === true;
     if (!isAdmin) {
       return Response.json({ error: 'Admin のみ実行可能です' }, { status: 403 });
     }
 
-    // Design 部署のテストユーザー 6 人分のデータ
-    const testUsers = [
-      { email: 'test_design01@example.com', full_name: 'テスト_デザイン01' },
-      { email: 'test_design02@example.com', full_name: 'テスト_デザイン02' },
-      { email: 'test_design03@example.com', full_name: 'テスト_デザイン03' },
-      { email: 'test_design04@example.com', full_name: 'テスト_デザイン04' },
-      { email: 'test_design05@example.com', full_name: 'テスト_デザイン05' },
-      { email: 'test_design06@example.com', full_name: 'テスト_デザイン06' }
-    ];
-
     const results = [];
 
     for (const testUser of testUsers) {
       console.log(`\n🔍 Processing: ${testUser.email}`);
-      
-      // Check if already exists
-      const existing = await base44.asServiceRole.entities.User.filter({
-        email: testUser.email
-      });
 
-      let savedUser;
+      const existing = await base44.asServiceRole.entities.User.filter({ email: testUser.email });
+
       if (existing.length > 0) {
-        // Update if necessary
         const existingUser = existing[0];
-        if (existingUser.department_code !== 'design' || existingUser.app_role !== '一般') {
-          await base44.asServiceRole.entities.User.update(existingUser.id, {
-            department_code: 'design',
-            app_role: '一般',
-            full_name: testUser.full_name
-          });
-          console.log(`📝 Updated: ${testUser.email}`);
-        }
-        savedUser = { ...existingUser, department_code: 'design', app_role: '一般', full_name: testUser.full_name };
+        await base44.asServiceRole.entities.User.update(existingUser.id, {
+          full_name: testUser.full_name,
+          department_code: testUser.department_code,
+          app_role: testUser.app_role,
+        });
+        console.log(`📝 Updated: ${testUser.email}`);
+        results.push({ ...testUser, status: 'updated' });
       } else {
-        // Create new
-        const newUser = await base44.asServiceRole.entities.User.create({
+        await base44.asServiceRole.entities.User.create({
           email: testUser.email,
           full_name: testUser.full_name,
-          department_code: 'design',
+          department_code: testUser.department_code,
           role: 'user',
-          app_role: '一般'
+          app_role: testUser.app_role,
         });
         console.log(`✅ Created: ${testUser.email}`);
-        savedUser = newUser;
-      }
-
-      // Verify
-      const verification = await base44.asServiceRole.entities.User.filter({
-        email: testUser.email
-      });
-
-      if (verification.length > 0) {
-        const verified = verification[0];
-        console.log(`✓ Verified: id=${verified.id}, dept=${verified.department_code}, role=${verified.app_role}`);
-        results.push({
-          email: verified.email,
-          full_name: verified.full_name,
-          department_code: verified.department_code,
-          app_role: verified.app_role,
-          status: 'success'
-        });
-      } else {
-        console.error(`✗ Verification failed: ${testUser.email}`);
-        results.push({
-          email: testUser.email,
-          status: 'failed',
-          error: 'Verification failed'
-        });
+        results.push({ ...testUser, status: 'created' });
       }
     }
 
-    // Summary
     const all = await base44.asServiceRole.entities.User.list();
-    const designUsers = all.filter(u => u.department_code === 'design');
-
-    console.log(`\n📊 Summary:`);
-    console.log(`  Total users: ${all.length}`);
-    console.log(`  Design users: ${designUsers.length}`);
-    console.log(`  Created/Updated: ${results.filter(r => r.status === 'success').length}`);
 
     return Response.json({
       success: true,
       results,
       summary: {
         total_users: all.length,
-        design_users: designUsers.length,
-        created_or_updated: results.filter(r => r.status === 'success').length
+        created_or_updated: results.length,
       }
     });
   } catch (error) {
     console.error('seedTestUsers error:', error);
-    return Response.json(
-      {
-        error: error.message || 'Seed failed'
-      },
-      { status: 500 }
-    );
+    return Response.json({ error: error.message || 'Seed failed' }, { status: 500 });
   }
 });
