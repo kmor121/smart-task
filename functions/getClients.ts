@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const allClients = await base44.entities.Client.list();
+    const allClients = await base44.asServiceRole.entities.Client.list();
 
     // is_active が無い/undefined の場合は「有効扱い」にする
     const activeClients = allClients.filter((c) => c.is_active !== false);
