@@ -281,12 +281,7 @@ export default function MyLogs() {
                           <td className="py-2.5 text-slate-700">{log.client_name || "—"}</td>
                           <td className="py-2.5 text-slate-800">{log.project_name || "—"}</td>
                           <td className="py-2.5">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-slate-700">{log.work_category_name}</span>
-                              {log.is_revision && (
-                                <Badge variant="outline" className="text-orange-600 border-orange-300 text-[10px] px-1">修正</Badge>
-                              )}
-                            </div>
+                            <span className="text-slate-700">{log.work_category_name}</span>
                           </td>
                           <td className="py-2.5 text-slate-600 max-w-md truncate">{log.description || "—"}</td>
                           <td className="py-2.5 text-right font-mono text-slate-800">{fmtTime(log.duration_minutes)}</td>
