@@ -157,6 +157,19 @@ export default function DailyLog() {
     cleanupData();
   }, [user?.email]);
 
+  // 無効化された案件が選択中の行をクリアする
+  useEffect(() => {
+    if (!projects || projects.length === 0) return;
+    setRows(prev => prev.map(row => {
+      if (!row.project_id) return row;
+      const project = projects.find(p => p.id === row.project_id);
+      if (project && project.is_active === false) {
+        return { ...row, project_id: "", project_name: "" };
+      }
+      return row;
+    }));
+  }, [projects]);
+
   // existingLogs → rows に変換するヘルパー
   const logsToRows = (logs) => {
     const normalizeId = (id) => {
