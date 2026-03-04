@@ -20,23 +20,18 @@ export default function EditProjectDialog({ open, onOpenChange, project, onSucce
   }, [project]);
 
   const handleSave = async () => {
-    const trimmedName = name.trim();
-    if (!trimmedName) {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
       toast.error("案件名を入力してください");
       return;
     }
-
-    console.log('💾 Saving project name:', { 
-      projectId: project.id, 
-      oldName: project.name, 
-      newName: trimmedName 
-    });
 
     setSaving(true);
     try {
       const response = await base44.functions.invoke("updateProject", {
         projectId: project.id,
-        name: trimmedName
+        project_date: project.project_date,
+        project_title: trimmedTitle,
       });
 
       console.log('📥 Server response:', response.data);
