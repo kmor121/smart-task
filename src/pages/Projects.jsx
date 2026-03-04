@@ -35,7 +35,7 @@ export default function ProjectsPage() {
   });
 
   const projects = projectsData?.projects || [];
-  const canDelete = isSalesUser || isAdmin;
+  const canDelete = canManageProjects;
 
   const handleDeleteClick = async (project) => {
     setDeleting(true);
