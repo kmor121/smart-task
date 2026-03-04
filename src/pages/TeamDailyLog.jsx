@@ -227,7 +227,17 @@ export default function TeamDailyLog() {
     );
   }
 
-  if (!isAdmin && !isManager) return <AccessDenied />;
+  // impersonate中は impersonateUser の権限で判定
+  const impersonateUserEmail = sessionStorage.getItem("impersonate_user_email");
+  const impersonateUserData = impersonateUserEmail
+    ? (() => { try { return JSON.parse(localStorage.getItem("impersonateUser") || "{}"); } catch { return {}; } })()
+    : null;
+  const effectiveIsManager = impersonateUserData
+    ? (impersonateUserData.app_role === "部長" || impersonateUserData.app_role === "副管理者")
+    : isManager;
+  const effectiveIsAdmin = isAdmin || (impersonateUserData?.role === "admin");
 
-  return <TeamDailyLogInner user={user} isAdmin={isAdmin} isManager={isManager} />;
+  if (!effectiveIsAdmin && !effectiveIsManager) return <AccessDenied />;
+
+  return <TeamDailyLogInner user={user} isAdmin={effectiveIsAdmin} isManager={effectiveIsManager} />;
 }
