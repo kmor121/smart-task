@@ -1,4 +1,4 @@
-import { createClientFromRequest } from "npm:@base44/sdk@0.8.6";
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.20";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
       req.method === "POST" ? await req.json().catch(() => ({})) : {};
     const client_id = body?.client_id;
 
-    const allProjects = await base44.entities.Project.list();
+    const allProjects = await base44.asServiceRole.entities.Project.list();
 
 
     // Project に is_active が無い可能性が高いので「false以外＝有効」で扱う

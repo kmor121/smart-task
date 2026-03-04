@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // deno-lint-ignore-file no-explicit-any
-import { createClientFromRequest } from "npm:@base44/sdk@0.8.6";
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.20";
 
 function json(payload: any, status = 200) {
   return new Response(JSON.stringify(payload), {
