@@ -24,7 +24,7 @@ export default function ProjectsPage() {
   const { data: projectsData, isLoading: projectsLoading } = useQuery({
     queryKey: ['projects', user?.email],
     queryFn: async () => {
-      const response = await base44.functions.invoke("getProjects", {});
+      const response = await base44.functions.invoke("getProjects", { include_inactive: true });
       return response.data;
     },
     enabled: !!user && (canToggle || isSubAdmin),
