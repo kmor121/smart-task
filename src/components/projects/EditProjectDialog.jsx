@@ -38,21 +38,13 @@ export default function EditProjectDialog({ open, onOpenChange, project, onSucce
 
       if (response.data.success) {
         toast.success("案件名を更新しました");
-        
-        // 即時反映のため onSuccess を呼ぶ
-        if (onSuccess) {
-          await onSuccess();
-        }
-        
+        if (onSuccess) await onSuccess();
         onOpenChange(false);
       } else {
-        const errorMsg = response.data.error || "更新に失敗しました";
-        console.error('❌ Update failed:', errorMsg);
-        toast.error(errorMsg);
+        toast.error(response.data.error || "更新に失敗しました");
       }
     } catch (error) {
-      console.error("❌ Failed to update project:", error);
-      toast.error(`案件名の更新に失敗しました（詳細はコンソールを確認）`);
+      toast.error("案件名の更新に失敗しました");
     } finally {
       setSaving(false);
     }
