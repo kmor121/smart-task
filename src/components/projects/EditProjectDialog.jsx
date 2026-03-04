@@ -62,15 +62,13 @@ export default function EditProjectDialog({ open, onOpenChange, project, onSucce
             <Label htmlFor="project-name">案件名</Label>
             <Input
               id="project-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="案件名を入力"
               maxLength={200}
               disabled={saving}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !saving) {
-                  handleSave();
-                }
+                if (e.key === "Enter" && !saving) handleSave();
               }}
             />
             {project && (
