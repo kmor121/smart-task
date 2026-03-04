@@ -15,21 +15,32 @@ export default function Dashboard() {
   const { user, isAdmin, isManager, isSales, isGeneral } = useCurrentUser();
   const { clients, departments, projects } = useMasterData();
 
+  // impersonate中の権限・部署を取得
+  const impersonateUserEmail = sessionStorage.getItem("impersonate_user_email");
+  const impersonateUserData = impersonateUserEmail
+    ? (() => { try { return JSON.parse(localStorage.getItem("impersonateUser") || "{}"); } catch { return {}; } })()
+    : null;
+  const effectiveDeptCode = impersonateUserData?.department_code || user?.department_code;
+  const effectiveIsManager = impersonateUserData
+    ? (impersonateUserData.app_role === "部長" || impersonateUserData.app_role === "副管理者")
+    : isManager;
+  const effectiveIsAdmin = isAdmin || (impersonateUserData?.role === "admin");
+
   const [filters, setFilters] = useState({
     startDate: format(startOfMonth(new Date()), "yyyy-MM-dd"),
     endDate: format(new Date(), "yyyy-MM-dd"),
     clientId: "",
-    departmentCode: isManager ? user?.department_code || "" : "",
+    departmentCode: effectiveIsManager ? effectiveDeptCode || "" : "",
   });
 
   const { data: workLogs = [], isLoading } = useQuery({
-    queryKey: ["dashboardLogs", user?.email, isAdmin, isManager],
+    queryKey: ["dashboardLogs", user?.email, effectiveIsAdmin, effectiveIsManager, effectiveDeptCode],
     queryFn: () => {
       // 管理者は全員分、部長は自部署のみ、それ以外は自分のみ
-      if (isAdmin) {
+      if (effectiveIsAdmin) {
         return base44.entities.WorkLog.list("-work_date", 5000);
-      } else if (isManager) {
-        return base44.entities.WorkLog.filter({ department_code: user.department_code });
+      } else if (effectiveIsManager) {
+        return base44.entities.WorkLog.filter({ department_code: effectiveDeptCode });
       } else {
         return base44.entities.WorkLog.filter({ user_email: user.email });
       }
