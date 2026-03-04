@@ -32,39 +32,18 @@ export default function ProjectsPage() {
 
   const projects = projectsData?.projects || [];
 
-  const handleDeleteClick = async (project) => {
-    if (deleting) return;
-    setDeleting(true);
+  const handleToggleActive = async (project) => {
+    if (toggling) return;
+    setToggling(true);
     try {
-      const logs = await base44.entities.WorkLog.filter({ project_id: project.id });
-      if (logs && logs.length > 0) {
-        toast.error("この案件には日報データが紐づいているため削除できません");
-        setDeleting(false);
-        return;
-      }
-      setDeletingProject(project);
-      setDeleteDialogOpen(true);
-    } catch (e) {
-      console.error("handleDeleteClick error:", e);
-      toast.error("確認中にエラーが発生しました: " + (e?.message || ""));
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deletingProject) return;
-    setDeleting(true);
-    try {
-      await base44.entities.Project.delete(deletingProject._id ?? deletingProject.id);
+      const newActive = project.is_active === false ? true : false;
+      await base44.entities.Project.update(project._id ?? project.id, { is_active: newActive });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success("案件を削除しました");
-      setDeleteDialogOpen(false);
-      setDeletingProject(null);
+      toast.success(newActive ? "案件を有効化しました" : "案件を無効化しました");
     } catch (e) {
-      toast.error("削除に失敗しました");
+      toast.error("更新に失敗しました");
     } finally {
-      setDeleting(false);
+      setToggling(false);
     }
   };
 
