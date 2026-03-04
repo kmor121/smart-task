@@ -13,10 +13,9 @@ import { toast } from "sonner";
 import EditProjectDialog from "../components/projects/EditProjectDialog";
 
 export default function ProjectsPage() {
-  const { user, loading } = useCurrentUser();
+  const { user, loading, isAdmin, isSubAdmin, canManageProjects } = useCurrentUser();
   const isSalesUser = user?.department_code === 'sales';
-  const isAdmin = user?.role === 'admin' || user?.isAdmin === true;
-  const canView = isSalesUser || isAdmin;
+  const canView = canManageProjects;
   const queryClient = useQueryClient();
   const { refreshProjects } = useMasterData();
   const [searchTerm, setSearchTerm] = useState("");
