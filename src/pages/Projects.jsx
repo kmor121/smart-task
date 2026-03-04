@@ -89,49 +89,57 @@ export default function ProjectsPage() {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {filteredProjects.map((project) => (
-              <Card key={project.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-lg truncate">
-                          {project.project_date} {project.project_title}
-                        </CardTitle>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 flex-shrink-0"
-                          onClick={() => {
-                            setEditingProject(project);
-                            setEditDialogOpen(true);
-                          }}
-                        >
-                          <Pencil className="w-3.5 h-3.5 text-slate-500" />
-                        </Button>
-                        {canDelete && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 flex-shrink-0 text-red-400 hover:text-red-600 hover:bg-red-50"
-                            onClick={() => handleDeleteClick(project)}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
+            {filteredProjects.map((project) => {
+              const isInactive = project.is_active === false;
+              return (
+                <Card key={project.id} className={isInactive ? "opacity-50" : ""}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className={`text-lg truncate ${isInactive ? "text-slate-400" : ""}`}>
+                            {project.project_date} {project.project_title}
+                          </CardTitle>
+                          {!isInactive && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 flex-shrink-0"
+                              onClick={() => {
+                                setEditingProject(project);
+                                setEditDialogOpen(true);
+                              }}
+                            >
+                              <Pencil className="w-3.5 h-3.5 text-slate-500" />
+                            </Button>
+                          )}
+                          {canToggle && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={`h-7 w-7 flex-shrink-0 ${isInactive ? "text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50" : "text-slate-400 hover:text-slate-600"}`}
+                              onClick={() => handleToggleActive(project)}
+                              disabled={toggling}
+                              title={isInactive ? "有効化" : "無効化"}
+                            >
+                              {isInactive ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                            </Button>
+                          )}
+                        </div>
+                        <p className={`text-sm mt-1 ${isInactive ? "text-slate-400" : "text-slate-500"}`}>顧客: {project.client_name}</p>
                       </div>
-                      <p className="text-sm text-slate-500 mt-1">顧客: {project.client_name}</p>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4 text-xs text-slate-500">
-                    <span>担当: {project.owner_user_name}</span>
-                    <span>作成日: {new Date(project.created_date).toLocaleDateString('ja-JP')}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                      <span>担当: {project.owner_user_name}</span>
+                      <span>作成日: {new Date(project.created_date).toLocaleDateString('ja-JP')}</span>
+                      {isInactive && <span className="text-slate-400 font-medium">（無効）</span>}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
