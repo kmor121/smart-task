@@ -138,10 +138,7 @@ export default function ProjectsPage() {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 flex-shrink-0 text-red-400 hover:text-red-600 hover:bg-red-50"
-                            onClick={() => {
-                              setDeletingProject(project);
-                              setDeleteDialogOpen(true);
-                            }}
+                            onClick={() => handleDeleteClick(project)}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
