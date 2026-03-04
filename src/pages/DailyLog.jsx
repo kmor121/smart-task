@@ -237,27 +237,83 @@ export default function DailyLog() {
     const row = rows[index];
 
     if (row._id || row.id) {
-      const confirmed = window.confirm("この作業記録を削除しますか？この操作は取り消せません。");
-      if (!confirmed) return;
       try {
         await base44.entities.WorkLog.delete(row._id ?? row.id);
-        toast.success("作業記録を削除しました");
       } catch (e) {
-        alert("削除に失敗しました: " + e?.message);
+        toast.error("削除に失敗しました: " + e?.message);
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["workLogs"] });
       queryClient.invalidateQueries({ queryKey: ["myLogsCount"] });
     }
 
-    if (rows.length > 1) {
-      // 複数行ある場合は行ごと削除
-      setRows([...rows.filter((_, i) => i !== index)]);
-    } else {
-      // 1行だけの場合は内容をクリア
-      setRows([emptyRow()]);
-    }
+    const newRows = rows.filter((_, i) => i !== index);
+    setRows(newRows);
     setHasLocalChanges(true);
+
+    // 削除後にDBと同期（下書き保存）
+    // 残ったrowsで saveWorkLogs を呼ぶため、少し遅延して実行
+    setTimeout(async () => {
+      const rowsToSave = newRows
+        .filter(r => r.work_category_id && r.duration_minutes)
+        .map(r => ({
+          id: r.id,
+          client_id: r.client_id || null,
+          client_name: r.client_name || "",
+          project_id: r.project_id || null,
+          project_name: r.project_name || "",
+          is_temporary_project: r.is_temporary_project || false,
+          work_category_id: r.work_category_id,
+          work_category_name: r.work_category_name || "",
+          is_revision: r.is_revision || false,
+          duration_minutes: Number(r.duration_minutes) || 0,
+          description: r.description || "",
+          status: "下書き",
+          submitted_at: null,
+        }));
+
+      if (rowsToSave.length === 0) {
+        // 保存すべき行がなければキャッシュだけ更新
+        queryClient.invalidateQueries({ queryKey: ["workLogs"] });
+        queryClient.invalidateQueries({ queryKey: ["myLogsCount"] });
+        toast.success("作業記録を削除しました");
+        return;
+      }
+
+      const impersonateUserEmail = sessionStorage.getItem("impersonate_user_email") || null;
+      const impersonateUserData = impersonateUserEmail
+        ? JSON.parse(localStorage.getItem("impersonateUser") || "{}")
+        : null;
+
+      const payload = {
+        work_date: dateStr,
+        rows: rowsToSave,
+        ...(impersonateUserEmail ? {
+          impersonate_user_email: impersonateUserEmail,
+          impersonate_user_name: impersonateUserData?.full_name || null,
+          impersonate_department_code: impersonateUserData?.department_code || null,
+        } : {}),
+      };
+
+      try {
+        const response = await base44.functions.invoke("saveDailyLog", payload);
+        const result = response.data;
+        if (result.success) {
+          const refreshed = await base44.entities.WorkLog.list('-created_date', 5000);
+          const myLogs = refreshed.filter((l) => l.work_date === dateStr && l.user_email === (impersonateUserEmail || user.email));
+          if (myLogs.length > 0) {
+            setRows(logsToRows(myLogs));
+            rowsInitializedRef.current = true;
+            queryClient.setQueryData(["workLogs", dateStr, user?.email], myLogs);
+          }
+          queryClient.invalidateQueries({ queryKey: ["myLogsCount"] });
+          queryClient.invalidateQueries({ queryKey: ["teamDailyLogs"] });
+          toast.success("作業記録を削除しました");
+        }
+      } catch (e) {
+        toast.error("同期に失敗しました");
+      }
+    }, 0);
   };
 
   // 新規案件作成（顧客未選択でも可能）
