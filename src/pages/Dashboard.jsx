@@ -53,17 +53,13 @@ export default function Dashboard() {
         // まず department_code を取得
         let logDeptCode = log.department_code;
         
-        // 既存データ互換：production → design, printing → print
-        if (logDeptCode === "production") logDeptCode = "design";
-        if (logDeptCode === "printing") logDeptCode = "print";
-        
         // department_name から逆引き（department_code が空の場合）
         if (!logDeptCode && log.department_name) {
           const nameToCode = {
             "制作部": "design",
             "営業部": "sales",
-            "印刷部": "print",
-            "製本部": "binding",
+            "印刷部": "printing",
+            "製本部": "production",
             "総務部": "general",
             "管理者": "admin",
             "ICT部": "ict"
