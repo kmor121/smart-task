@@ -30,10 +30,8 @@ const DEPT_LABELS = {
   sales: "営業部",
   design: "制作部",
   ict: "ICT部",
-  print: "印刷部",
   printing: "印刷部",
-  binding: "製本部",
-  general: "総務部",
+  production: "製本部",
 };
 
 export default function ImpersonateUserDialog({ open, onOpenChange }) {
