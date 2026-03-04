@@ -245,6 +245,7 @@ export default function Layout({ children, currentPageName }) {
         open={impersonateDialogOpen} 
         onOpenChange={setImpersonateDialogOpen} 
       />
+      <Toaster />
     </div>
   );
 }
