@@ -166,8 +166,8 @@ export default function Dashboard() {
           onChange={setFilters}
           clients={clients}
           departments={departments}
-          isManager={isManager}
-          userDepartment={user?.department_code}
+          isManager={effectiveIsManager}
+          userDepartment={effectiveDeptCode}
         />
       </div>
 
