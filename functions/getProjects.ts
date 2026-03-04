@@ -29,12 +29,15 @@ Deno.serve(async (req) => {
 
     const allProjects = await base44.asServiceRole.entities.Project.list();
 
+    // include_inactive=true の場合は全件返す（案件管理ページ用）
+    const includeInactive = body?.include_inactive === true;
 
-    // Project に is_active が無い可能性が高いので「false以外＝有効」で扱う
-    let activeProjects = allProjects.filter((p) => p.is_active !== false);
+    let resultProjects = includeInactive
+      ? allProjects
+      : allProjects.filter((p) => p.is_active !== false);
 
     if (client_id) {
-      activeProjects = activeProjects.filter(
+      resultProjects = resultProjects.filter(
         (p) => String(p.client_id) === String(client_id)
       );
     }
@@ -42,25 +45,9 @@ Deno.serve(async (req) => {
     return Response.json(
       {
         success: true,
-        projects: activeProjects,
-        count: activeProjects.length,
+        projects: resultProjects,
+        count: resultProjects.length,
         filter: client_id ? { client_id } : null,
-        _debug: {
-          total_count: allProjects.length,
-          active_count: allProjects.filter((p) => p.is_active !== false).length,
-          filtered_count: activeProjects.length,
-          client_id_filter: client_id || null,
-          sample: activeProjects[0]
-            ? {
-                id: activeProjects[0].id,
-                project_title: activeProjects[0].project_title,
-                name: activeProjects[0].name,
-                project_date: activeProjects[0].project_date,
-                client_id: activeProjects[0].client_id,
-                is_active: activeProjects[0].is_active,
-              }
-            : null,
-        },
       },
       { headers: corsHeaders }
     );
