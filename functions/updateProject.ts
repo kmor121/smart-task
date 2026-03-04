@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
   try {
@@ -9,7 +9,6 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 権限チェック：営業部、管理者、副管理者のみ
     const isAdmin = user.role === "admin" || user.isOwner === true || user.isAdmin === true;
     const isSubAdmin = user.app_role === "副管理者";
     const isSales = user.department_code === "sales";
@@ -20,7 +19,6 @@ Deno.serve(async (req) => {
 
     const { projectId, project_date, project_title } = await req.json();
 
-    // バリデーション
     if (!projectId) {
       return Response.json({ error: '案件IDが必要です' }, { status: 400 });
     }
@@ -38,16 +36,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: '案件名は200文字以内で入力してください' }, { status: 400 });
     }
 
-    // 案件を取得（存在確認）
-    const existingProject = await base44.asServiceRole.entities.Project.filter({ id: projectId });
-    if (!existingProject || existingProject.length === 0) {
-      return Response.json({ error: '案件が見つかりません' }, { status: 404 });
-    }
-
     // 表示用nameを生成
     const name = `${project_date}　${trimmedTitle}`;
 
-    // 案件を更新
+    // 案件を更新（存在確認なしで直接update）
     await base44.asServiceRole.entities.Project.update(projectId, {
       project_date,
       project_title: trimmedTitle,
