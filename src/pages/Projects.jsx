@@ -27,7 +27,7 @@ export default function ProjectsPage() {
       const response = await base44.functions.invoke("getProjects", {});
       return response.data;
     },
-    enabled: !!user && (canDelete || isSubAdmin),
+    enabled: !!user && (canToggle || isSubAdmin),
   });
 
   const projects = projectsData?.projects || [];
