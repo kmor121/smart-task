@@ -19,10 +19,10 @@ const TEST_USERS = [
   { id: "test_design_2", email: "test_design_2@example.com", full_name: "制作テスト2", department_code: "design", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
   { id: "test_design_3", email: "test_design_3@example.com", full_name: "制作テスト3", department_code: "design", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
   { id: "test_ict", email: "test_ict@example.com", full_name: "ICTテスト", department_code: "ict", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
-  { id: "test_print", email: "test_print@example.com", full_name: "印刷テスト", department_code: "print", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
-  { id: "test_print_2", email: "test_print_2@example.com", full_name: "印刷テスト2", department_code: "print", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
-  { id: "test_binding", email: "test_binding@example.com", full_name: "製本テスト", department_code: "binding", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
-  { id: "test_general", email: "test_general@example.com", full_name: "総務テスト", department_code: "general", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
+  { id: "test_print", email: "test_print@example.com", full_name: "印刷テスト", department_code: "printing", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
+  { id: "test_print_2", email: "test_print_2@example.com", full_name: "印刷テスト2", department_code: "printing", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
+  { id: "test_binding", email: "test_binding@example.com", full_name: "製本テスト", department_code: "production", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
+  { id: "test_general", email: "test_general@example.com", full_name: "総務テスト", department_code: "admin", app_role: "一般", role: "staff", isAdmin: false, isOwner: false },
 ];
 
 const DEPT_LABELS = {
