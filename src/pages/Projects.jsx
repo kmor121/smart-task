@@ -38,17 +38,20 @@ export default function ProjectsPage() {
   const canDelete = canManageProjects;
 
   const handleDeleteClick = async (project) => {
+    if (deleting) return;
     setDeleting(true);
     try {
       const logs = await base44.entities.WorkLog.filter({ project_id: project.id });
-      if (logs.length > 0) {
+      if (logs && logs.length > 0) {
         toast.error("この案件には日報データが紐づいているため削除できません");
+        setDeleting(false);
         return;
       }
       setDeletingProject(project);
       setDeleteDialogOpen(true);
     } catch (e) {
-      toast.error("確認中にエラーが発生しました");
+      console.error("handleDeleteClick error:", e);
+      toast.error("確認中にエラーが発生しました: " + (e?.message || ""));
     } finally {
       setDeleting(false);
     }
