@@ -772,7 +772,16 @@ export default function DailyLog() {
                   {/* ヘッダー */}
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-semibold text-slate-700">本日の作業 {index + 1}</p>
-
+                    {rows.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeRow(index)}
+                        className="p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        title="この作業を削除"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="space-y-3">
