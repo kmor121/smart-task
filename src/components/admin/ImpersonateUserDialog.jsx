@@ -49,7 +49,7 @@ export default function ImpersonateUserDialog({ open, onOpenChange }) {
     const admins = TEST_USERS.filter(u => u.role === "admin").sort((a, b) => a.full_name.localeCompare(b.full_name));
     
     // 部長の表示順を固定
-    const managerOrder = { sales: 1, design: 2, ict: 3, print: 4, binding: 5 };
+    const managerOrder = { sales: 1, design: 2, ict: 3, printing: 4, production: 5 };
     const managers = TEST_USERS.filter(u => u.role === "manager").sort((a, b) => {
       const orderA = managerOrder[a.department_code] || 999;
       const orderB = managerOrder[b.department_code] || 999;
