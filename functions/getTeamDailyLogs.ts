@@ -17,16 +17,20 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { date_from, date_to, department_code } = body;
+    const { date_from, date_to, department_code, impersonate_department_code, impersonate_is_manager } = body;
 
     if (!date_from || !date_to) {
       return Response.json({ error: '日付範囲は必須です' }, { status: 400 });
     }
 
+    // impersonate中の場合はフロントから送られた部署・権限情報を使う
+    const effectiveDeptCode = impersonate_department_code || user.department_code;
+    const effectiveIsManager = impersonate_is_manager === true ? true : isManager;
+
     // 部長は自部署のみに強制
     let targetDept = department_code || null;
-    if (isManager && !isAdmin) {
-      targetDept = user.department_code;
+    if (effectiveIsManager && !isAdmin) {
+      targetDept = effectiveDeptCode;
     }
 
     // 全WorkLogを取得（日付範囲でJS側フィルタ）
