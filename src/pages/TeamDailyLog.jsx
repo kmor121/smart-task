@@ -64,10 +64,12 @@ function TeamDailyLogInner({ user, isAdmin, isManager }) {
         date_from: dateFromStr,
         date_to: dateToStr,
         department_code: departmentFilter === "all" ? null : departmentFilter,
+        impersonate_department_code: impersonateUserData?.department_code || null,
+        impersonate_is_manager: effectiveIsManager,
       });
       return response.data;
     },
-    enabled: !!user && (isAdmin || isManager),
+    enabled: !!user && (isAdmin || isManager || effectiveIsManager),
     staleTime: 0,
   });
 
