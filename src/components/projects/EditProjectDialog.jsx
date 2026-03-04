@@ -8,14 +8,14 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 
 export default function EditProjectDialog({ open, onOpenChange, project, onSuccess }) {
-  const [name, setName] = useState("");
+  const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (project) {
-      setName(project.name || "");
+      setTitle(project.project_title || "");
     } else {
-      setName("");
+      setTitle("");
     }
   }, [project]);
 
