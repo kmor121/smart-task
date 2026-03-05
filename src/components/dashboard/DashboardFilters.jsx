@@ -7,11 +7,9 @@ const DEPT_LABELS = {
   sales: "営業部",
   design: "制作部",
   ict: "ICT部",
-  print: "印刷部",
   printing: "印刷部",
-  binding: "製本部",
+  production: "製本部",
   general: "総務部",
-  admin: "管理者",
 };
 
 export default function DashboardFilters({ filters, onChange, clients, departments, isManager, userDepartment }) {
@@ -65,7 +63,7 @@ export default function DashboardFilters({ filters, onChange, clients, departmen
               <SelectItem value="ict">ICT部</SelectItem>
               <SelectItem value="printing">印刷部</SelectItem>
               <SelectItem value="production">製本部</SelectItem>
-              <parameter name="replace">              <SelectItem value="general">総務部</SelectItem>
+              <SelectItem value="general">総務部</SelectItem>
             </SelectContent>
           </Select>
         )}
