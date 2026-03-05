@@ -17,7 +17,7 @@ import TeamDayGroup from "../components/team/TeamDayGroup";
 
 const DEPT_LABELS = {
   sales: "営業", design: "制作", ict: "ICT",
-  print: "印刷", binding: "製本", general: "総務", manufacturing: "製造"
+  printing: "印刷", production: "製本", general: "総務"
 };
 
 function AccessDenied() {
