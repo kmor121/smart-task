@@ -1,0 +1,9 @@
+{
+  "name": "Smart Task (\u79fb\u884cver)",
+  "site": {
+    "installCommand": "npm install",
+    "buildCommand": "npm run build",
+    "serveCommand": "npm run dev",
+    "outputDirectory": "./dist"
+  }
+}
